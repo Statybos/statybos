@@ -26,7 +26,9 @@ import {
 } from "lucide-react";
 import {
   createDeployment,
+  deleteObject,
   deleteDeployment,
+  updateEmployeeObject,
   updateObjectHeadcount,
   upsertObject,
 } from "@/app/actions/planner";
@@ -352,6 +354,22 @@ export function DeploymentPlanner({
               </option>
             ))}
           </select>
+          {selected ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (!window.confirm(`Ištrinti objektą „${selected.title}“?`)) return;
+                start(async () => {
+                  await deleteObject(selected.id);
+                  setSelectedObjectId("");
+                  toast.success("Objektas ištrintas");
+                });
+              }}
+              className="rounded-xl border border-red-200 px-3 py-2 text-sm text-red-700 hover:bg-red-50"
+            >
+              Ištrinti objektą
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => setShowObjectForm((v) => !v)}
@@ -741,7 +759,31 @@ export function DeploymentPlanner({
                         <p className="font-medium">
                           {e.firstName} {e.lastName}
                         </p>
-                        <p className="text-sm text-muted">{e.specialty}</p>
+                        <label className="mt-1 block text-xs text-muted">
+                          Priskirtas objektas
+                          <select
+                            value={e.assignedObjectId ?? ""}
+                            onChange={(event) => {
+                              const objectId = event.target.value || null;
+                              start(async () => {
+                                const result = await updateEmployeeObject(e.id, objectId);
+                                if (result?.error) {
+                                  toast.error(result.error);
+                                  return;
+                                }
+                                toast.success("Priskyrimas atnaujintas");
+                              });
+                            }}
+                            className="mt-1 block w-full rounded-lg border bg-white px-2 py-1.5 text-sm text-ink"
+                          >
+                            <option value="">Nepriskirta</option>
+                            {activeObjects.map((object) => (
+                              <option key={object.id} value={object.id}>
+                                {object.country} – {object.title}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
                         {leave ? (
                           <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 text-xs text-sky-800">
                             <Sun className="h-3 w-3" />

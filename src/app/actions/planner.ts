@@ -34,6 +34,32 @@ export async function updateObjectHeadcount(id: string, requiredHeadcount: numbe
   return { ok: true as const };
 }
 
+export async function deleteObject(id: string) {
+  await prisma.projectObject.delete({ where: { id } });
+  revalidatePath("/admin/planuoklis");
+  revalidatePath("/admin/darbuotojai");
+}
+
+export async function updateEmployeeObject(employeeId: string, objectId: string | null) {
+  const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
+  if (!employee) return { error: "Darbuotojas nerastas" };
+  if (objectId) {
+    const object = await prisma.projectObject.findUnique({ where: { id: objectId } });
+    if (!object) return { error: "Objektas nerastas" };
+  }
+
+  await prisma.employee.update({
+    where: { id: employeeId },
+    data: {
+      assignedObjectId: objectId,
+      status: objectId && employee.status !== "INACTIVE" ? "ON_SITE" : "BENCH_LT",
+    },
+  });
+  revalidatePath("/admin/planuoklis");
+  revalidatePath("/admin/darbuotojai");
+  return { ok: true as const };
+}
+
 export async function createDeployment(formData: FormData) {
   const employeeId = String(formData.get("employeeId") ?? "");
   const objectId = String(formData.get("objectId") ?? "") || null;

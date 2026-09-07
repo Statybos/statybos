@@ -3,6 +3,7 @@ import { logoutAction } from "@/app/actions/auth";
 import {
   Briefcase,
   CalendarRange,
+  FileText,
   HardHat,
   LayoutList,
   Users,
@@ -13,6 +14,7 @@ const links = [
   { href: "/admin/darbuotojai", label: "Darbuotojai", icon: Users },
   { href: "/admin/skelbimai", label: "Skelbimai", icon: Briefcase },
   { href: "/admin/planuoklis", label: "Planuoklis", icon: CalendarRange },
+  { href: "/admin/saskaitos", label: "Sąskaitų išrašymai", icon: FileText },
 ];
 
 export function AdminSidebar({ pathname }: { pathname: string }) {

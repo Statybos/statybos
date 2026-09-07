@@ -10,7 +10,7 @@ import {
   updateEmployeeWage,
   upsertEmployee,
 } from "@/app/actions/employees";
-import { EMPLOYEE_STATUSES, SPECIALTIES, employeeStatusLabel } from "@/lib/constants";
+import { SPECIALTIES } from "@/lib/constants";
 
 type ObjectOpt = { id: string; title: string; country: string };
 
@@ -60,21 +60,6 @@ function parseHistory(raw: string): WageChange[] {
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
-  }
-}
-
-function statusTone(status: string) {
-  switch (status) {
-    case "ON_SITE":
-      return "bg-emerald-100 text-emerald-800";
-    case "ON_LEAVE":
-      return "bg-sky-100 text-sky-800";
-    case "BENCH_LT":
-      return "bg-amber-100 text-amber-900";
-    case "INACTIVE":
-      return "bg-slate-200 text-slate-700";
-    default:
-      return "bg-slate-100 text-slate-700";
   }
 }
 
@@ -225,11 +210,7 @@ export function EmployeeManager({
                   <h2 className="font-bold text-navy">
                     {e.firstName} {e.lastName}
                   </h2>
-                  <p className="text-sm text-muted">{e.specialty}</p>
                 </div>
-                <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${statusTone(e.status)}`}>
-                  {employeeStatusLabel(e.status)}
-                </span>
               </div>
 
               <div className="space-y-1.5 text-sm text-muted">
@@ -437,18 +418,6 @@ export function EmployeeManager({
                 </label>
               ))}
               <label className="grid gap-1 text-sm">
-                Specialybė / kvalifikacija
-                <select
-                  value={form.specialty}
-                  onChange={(e) => setForm((p) => ({ ...p, specialty: e.target.value }))}
-                  className="rounded-lg border px-3 py-2"
-                >
-                  {SPECIALTIES.map((s) => (
-                    <option key={s}>{s}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="grid gap-1 text-sm">
                 Valandinis (€)
                 <input
                   value={form.hourlyRate}
@@ -457,20 +426,6 @@ export function EmployeeManager({
                   placeholder="18.50"
                   className="rounded-lg border px-3 py-2"
                 />
-              </label>
-              <label className="grid gap-1 text-sm">
-                Statusas
-                <select
-                  value={form.status}
-                  onChange={(e) => setForm((p) => ({ ...p, status: e.target.value }))}
-                  className="rounded-lg border px-3 py-2"
-                >
-                  {EMPLOYEE_STATUSES.map((s) => (
-                    <option key={s.key} value={s.key}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
               </label>
               {form.status === "INACTIVE" ? (
                 <label className="grid gap-1 text-sm">

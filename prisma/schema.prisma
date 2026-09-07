@@ -88,6 +88,29 @@ model ProjectObject {
   deployments       Deployment[]
 }
 
+model BillingCustomer {
+  id              String           @id @default(cuid())
+  name            String           @unique
+  billingInterval String           @default("BIWEEKLY")
+  billingDay      Int              @default(1)
+  anchorWeek      Int              @default(1)
+  createdAt       DateTime         @default(now())
+  invoices        BillingInvoice[]
+}
+
+model BillingInvoice {
+  id         String          @id @default(cuid())
+  customerId String
+  customer   BillingCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  year       Int
+  fromWeek   Int
+  toWeek     Int
+  issuedAt   DateTime        @default(now())
+
+  @@unique([customerId, year, fromWeek, toWeek])
+  @@index([year, fromWeek, toWeek])
+}
+
 model Deployment {
   id         String         @id @default(cuid())
   employeeId String
