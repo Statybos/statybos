@@ -10,11 +10,11 @@ import {
 } from "lucide-react";
 
 const links = [
-  { href: "/admin/kandidatai", label: "Kandidatai", icon: LayoutList },
   { href: "/admin/darbuotojai", label: "Darbuotojai", icon: Users },
-  { href: "/admin/skelbimai", label: "Skelbimai", icon: Briefcase },
   { href: "/admin/planuoklis", label: "Planuoklis", icon: CalendarRange },
-  { href: "/admin/saskaitos", label: "Sąskaitų išrašymai", icon: FileText },
+  { href: "/admin/kandidatai", label: "Kandidatai", icon: LayoutList },
+  { href: "/admin/skelbimai", label: "Skelbimai", icon: Briefcase },
+  { href: "/admin/saskaitos", label: "Sąskaitų priminimai", icon: FileText },
 ];
 
 export function AdminSidebar({ pathname }: { pathname: string }) {

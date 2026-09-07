@@ -8,6 +8,7 @@ import {
   endOfMonth,
   endOfWeek,
   format,
+  getISOWeek,
   isSameDay,
   isSameMonth,
   startOfDay,
@@ -448,6 +449,10 @@ export function DeploymentPlanner({
             {/* Mėnesio kalendorius */}
             <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-navy/5">
               <div className="mb-4 flex items-center justify-between">
+                <div className="min-w-28">
+                  <p className="text-xs uppercase tracking-wide text-muted">Dabartinė savaitė</p>
+                  <p className="text-lg font-bold text-navy">{getISOWeek(today)} savaitė</p>
+                </div>
                 <button
                   type="button"
                   onClick={() => setMonth((m) => addMonths(m, -1))}

@@ -14,12 +14,6 @@ const items = [
     tone: "bg-sky",
   },
   {
-    icon: CalendarRange,
-    title: "Apmokame keliones",
-    text: "Kelionės į darbą ir iš darbo apmokamos.",
-    tone: "bg-mint",
-  },
-  {
     icon: ShieldCheck,
     title: "Legalus darbas ir garantijos",
     text: "Darbo sutartis, A1 forma, laiku mokamas atlyginimas. Apmokame visus reikalingus sertifikatus ir kursus.",
