@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { format } from "date-fns";
+import { addDays, addMonths, differenceInCalendarDays, format, getISOWeek, startOfDay, startOfWeek } from "date-fns";
 import { lt } from "date-fns/locale";
 import { toast } from "sonner";
 import { Check, FileText, Plus, Trash2 } from "lucide-react";
 import {
   createBillingCustomer,
+  deleteBillingInvoice,
   deleteBillingCustomer,
   markInvoiceIssued,
 } from "@/app/actions/billing";
@@ -34,20 +35,45 @@ function scheduleLabel(customer: CustomerRow) {
   return `Kartą per mėnesį, mėnesio ${customer.billingDay} d.`;
 }
 
-function isCovered(customer: CustomerRow, year: number, week: number) {
-  return customer.invoices.some(
-    (invoice) =>
-      invoice.year === year && invoice.fromWeek <= week && invoice.toWeek >= week,
-  );
+function monthlyDate(base: Date, day: number) {
+  const candidate = new Date(base.getFullYear(), base.getMonth(), 1);
+  const lastDay = new Date(candidate.getFullYear(), candidate.getMonth() + 1, 0).getDate();
+  candidate.setDate(Math.min(day, lastDay));
+  return startOfDay(candidate);
 }
 
-function isDue(customer: CustomerRow, currentYear: number, currentWeek: number, currentDate: string) {
-  if (isCovered(customer, currentYear, currentWeek)) return false;
-  if (customer.billingInterval === "WEEKLY") return true;
-  if (customer.billingInterval === "BIWEEKLY") {
-    return (currentWeek - customer.anchorWeek + 53) % 2 === 0;
+function nextDueDate(customer: CustomerRow, currentDate: string) {
+  const today = startOfDay(new Date(currentDate));
+  const latest = customer.invoices[0];
+
+  if (latest) {
+    const issuedAt = startOfDay(new Date(latest.issuedAt));
+    if (customer.billingInterval === "MONTHLY") {
+      return monthlyDate(addMonths(issuedAt, 1), customer.billingDay);
+    }
+    return addDays(issuedAt, customer.billingInterval === "WEEKLY" ? 7 : 14);
   }
-  return new Date(currentDate).getDate() >= customer.billingDay;
+
+  if (customer.billingInterval === "MONTHLY") {
+    const thisMonth = monthlyDate(today, customer.billingDay);
+    return thisMonth >= today ? thisMonth : monthlyDate(addMonths(today, 1), customer.billingDay);
+  }
+
+  if (customer.billingInterval === "BIWEEKLY") {
+    const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+    const currentWeek = getISOWeek(today);
+    return (currentWeek - customer.anchorWeek + 53) % 2 === 0 ? weekStart : addDays(weekStart, 7);
+  }
+
+  return today;
+}
+
+function dueLabel(customer: CustomerRow, currentDate: string) {
+  const dueDate = nextDueDate(customer, currentDate);
+  const days = differenceInCalendarDays(dueDate, startOfDay(new Date(currentDate)));
+  if (days > 0) return { tone: "upcoming", text: `Liko ${days} ${days === 1 ? "diena" : "dienos"} iki ${format(dueDate, "yyyy-MM-dd")}` };
+  if (days === 0) return { tone: "today", text: `Galima išrašyti šiandien (${format(dueDate, "yyyy-MM-dd")})` };
+  return { tone: "late", text: `Vėluojame išrašyti ${Math.abs(days)} ${Math.abs(days) === 1 ? "dieną" : "dienas"} (turėjo būti ${format(dueDate, "yyyy-MM-dd")})` };
 }
 
 export function BillingManager({
@@ -63,6 +89,7 @@ export function BillingManager({
 }) {
   const [showForm, setShowForm] = useState(false);
   const [pending, start] = useTransition();
+  const [expandedHistory, setExpandedHistory] = useState<Record<string, boolean>>({});
 
   function submitCustomer(formData: FormData) {
     start(async () => {
@@ -141,8 +168,9 @@ export function BillingManager({
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           {customers.map((customer) => {
-            const due = isDue(customer, currentYear, currentWeek, currentDate);
+            const due = dueLabel(customer, currentDate);
             const periodStart = customer.billingInterval === "MONTHLY" ? currentWeek : Math.max(1, currentWeek - 1);
+            const visibleInvoices = expandedHistory[customer.id] ? customer.invoices : customer.invoices.slice(0, 3);
             return (
               <article key={customer.id} className="rounded-2xl border border-navy/10 bg-white p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
@@ -165,8 +193,8 @@ export function BillingManager({
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
-                <div className={`mt-4 rounded-xl px-3 py-2 text-sm ${due ? "bg-amber-50 text-amber-900" : "bg-emerald-50 text-emerald-800"}`}>
-                  {due ? `Priminimas: pagal nustatymą laikas tikrinti ${customer.billingInterval === "MONTHLY" ? `mėnesio ${customer.billingDay} d.` : `savaitę ${currentWeek}`}.` : "Šiam laikotarpiui jau pažymėta arba dar ne laikas."}
+                <div className={`mt-4 rounded-xl px-3 py-2 text-sm ${due.tone === "late" ? "bg-red-50 text-red-800" : due.tone === "today" ? "bg-amber-50 text-amber-900" : "bg-emerald-50 text-emerald-800"}`}>
+                  {due.text}
                 </div>
                 {customer.billingInterval !== "MONTHLY" ? (
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
@@ -187,9 +215,32 @@ export function BillingManager({
                   <p className="mb-2 inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted"><FileText className="h-3.5 w-3.5" /> Išrašytos sąskaitos</p>
                   {customer.invoices.length === 0 ? <p className="text-sm text-muted">Dar nepažymėta.</p> : (
                     <ul className="space-y-1 text-sm text-muted">
-                      {customer.invoices.slice(0, 5).map((invoice) => <li key={invoice.id}>✓ {invoice.fromWeek}–{invoice.toWeek} savaitės · {format(new Date(invoice.issuedAt), "yyyy-MM-dd")}</li>)}
+                      {visibleInvoices.map((invoice) => (
+                        <li key={invoice.id} className="flex items-center justify-between gap-2">
+                          <span>✓ Išrašyta {format(new Date(invoice.issuedAt), "yyyy-MM-dd")} · {invoice.fromWeek}–{invoice.toWeek} savaitės</span>
+                          <button
+                            type="button"
+                            className="shrink-0 text-xs text-red-600 underline"
+                            onClick={() => start(async () => {
+                              await deleteBillingInvoice(invoice.id);
+                              toast.success("Pažymėjimas atšauktas");
+                            })}
+                          >
+                            Atšaukti
+                          </button>
+                        </li>
+                      ))}
                     </ul>
                   )}
+                  {customer.invoices.length > 3 ? (
+                    <button
+                      type="button"
+                      onClick={() => setExpandedHistory((state) => ({ ...state, [customer.id]: !state[customer.id] }))}
+                      className="mt-2 text-xs font-semibold text-navy underline"
+                    >
+                      {expandedHistory[customer.id] ? "Rodyti mažiau" : `Rodyti daugiau (${customer.invoices.length - 3})`}
+                    </button>
+                  ) : null}
                 </div>
               </article>
             );

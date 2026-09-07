@@ -55,3 +55,8 @@ export async function markInvoiceIssued(formData: FormData) {
   revalidatePath("/admin/saskaitos");
   return { ok: true as const };
 }
+
+export async function deleteBillingInvoice(id: string) {
+  await prisma.billingInvoice.delete({ where: { id } });
+  revalidatePath("/admin/saskaitos");
+}
