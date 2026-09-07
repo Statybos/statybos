@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { deleteJob, toggleJobActive, upsertJob } from "@/app/actions/jobs";
-import { SPECIALTIES } from "@/lib/constants";
 
 type Job = {
   id: string;
@@ -25,7 +24,7 @@ const empty: Job = {
   salaryText: "",
   description: "",
   requirements: "",
-  specialty: SPECIALTIES[0] as string,
+  specialty: "",
   isActive: true,
 };
 
@@ -137,15 +136,6 @@ export function JobManager({ jobs }: { jobs: Job[] }) {
                 placeholder="Atlyginimas *"
                 className="rounded-lg border px-3 py-2"
               />
-              <select
-                value={form.specialty}
-                onChange={(e) => patch("specialty", e.target.value)}
-                className="rounded-lg border px-3 py-2"
-              >
-                {SPECIALTIES.map((s) => (
-                  <option key={s}>{s}</option>
-                ))}
-              </select>
             </div>
             <textarea
               value={form.requirements}
