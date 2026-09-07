@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+:root {
+  --navy: #2f4553;
+  --navy-2: #3d5a6c;
+  --amber: #e8a07a;
+  --amber-2: #f0c4a8;
+  --sand: #f4f1ec;
+  --mint: #e3efe9;
+  --sky: #e4eef6;
+  --peach: #f7e6da;
+  --ink: #2a3540;
+  --muted: #6b7c89;
+  --card: #ffffff;
+}
+
+@theme inline {
+  --color-navy: var(--navy);
+  --color-navy-2: var(--navy-2);
+  --color-amber: var(--amber);
+  --color-amber-2: var(--amber-2);
+  --color-sand: var(--sand);
+  --color-mint: var(--mint);
+  --color-sky: var(--sky);
+  --color-peach: var(--peach);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-card: var(--card);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background:
+    radial-gradient(ellipse at top left, rgba(227, 239, 233, 0.9), transparent 45%),
+    radial-gradient(ellipse at top right, rgba(228, 238, 246, 0.85), transparent 40%),
+    linear-gradient(180deg, #f7f5f2 0%, var(--sand) 100%);
+  color: var(--ink);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.hero-grid {
+  background-image:
+    linear-gradient(135deg, rgba(47, 69, 83, 0.88), rgba(61, 90, 108, 0.75)),
+    radial-gradient(circle at 85% 15%, rgba(232, 160, 122, 0.45), transparent 42%),
+    linear-gradient(120deg, #3d5a6c 0%, #5a8f7d 55%, #2f4553 100%);
+}
+
+.pattern-stripes {
+  background-image: repeating-linear-gradient(
+    -55deg,
+    rgba(255, 255, 255, 0.05) 0px,
+    rgba(255, 255, 255, 0.05) 12px,
+    transparent 12px,
+    transparent 24px
+  );
+}
+
+.pastel-card {
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 10px 30px rgba(47, 69, 83, 0.06);
+}

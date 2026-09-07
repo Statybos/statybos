@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model JobPosting {
+  id            String      @id @default(cuid())
+  title         String
+  country       String
+  city          String      @default("")
+  salaryText    String
+  description   String
+  requirements  String      @default("")
+  specialty     String      @default("")
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  candidates    Candidate[]
+}
+
+model Candidate {
+  id            String     @id @default(cuid())
+  jobId         String?
+  job           JobPosting? @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  fullName      String
+  phone         String
+  cityLt        String
+  specialty     String
+  languages     String     @default("[]")
+  driverLicense String     @default("Nėra")
+  availableFrom DateTime?
+  cvUrl         String?
+  comment       String?
+  status        String     @default("NEW")
+  notes         String     @default("[]")
+  createdAt     DateTime   @default(now())
+  employee      Employee?
+}
+
+model Employee {
+  id               String              @id @default(cuid())
+  candidateId      String?             @unique
+  candidate        Candidate?          @relation(fields: [candidateId], references: [id], onDelete: SetNull)
+  firstName        String
+  lastName         String
+  personalCode     String              @default("")
+  phone            String
+  email            String              @default("")
+  addressLt        String              @default("")
+  iban             String              @default("")
+  specialty        String
+  hourlyRate       Float               @default(0)
+  wageHistory      String              @default("[]")
+  a1Expiry         DateTime?
+  contractExpiry   DateTime?
+  idCardExpiry     DateTime?
+  status           String              @default("BENCH_LT")
+  dismissedAt      DateTime?
+  assignedObjectId String?
+  assignedObject   ProjectObject?      @relation(fields: [assignedObjectId], references: [id], onDelete: SetNull)
+  createdAt        DateTime            @default(now())
+  documents        EmployeeDocument[]
+  deployments      Deployment[]
+}
+
+model EmployeeDocument {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  name       String
+  url        String
+  createdAt  DateTime @default(now())
+}
+
+model ProjectObject {
+  id                String       @id @default(cuid())
+  title             String
+  country           String
+  address           String       @default("")
+  clientName        String       @default("")
+  requiredHeadcount Int          @default(1)
+  status            String       @default("ACTIVE")
+  employees         Employee[]
+  deployments       Deployment[]
+}
+
+model Deployment {
+  id         String         @id @default(cuid())
+  employeeId String
+  employee   Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  objectId   String?
+  object     ProjectObject? @relation(fields: [objectId], references: [id], onDelete: SetNull)
+  startDate  DateTime
+  endDate    DateTime
+  type       String
+  notes      String         @default("")
+}
