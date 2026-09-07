@@ -30,7 +30,7 @@ export function Hero() {
           </h1>
           <p className="mt-4 max-w-xl text-base text-white/90 md:text-lg">
             Įdarbiname statybų specialistus Europoje. Legalios sutartys, nemokamas
-            apgyvendinimas, aiškios rotacijos. Apmokame visus reikalingus sertifikatus ir kursus.
+            apgyvendinimas, apmokamos kelionės ir aiškios rotacijos. Rotacija gali būti ilgesnė pagal susitarimą, bet minimali trukmė – 8 savaitės.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <a
@@ -60,6 +60,11 @@ export function Hero() {
               icon: MapPinned,
               label: "Europa",
               text: "Suomija, Danija, Švedija ir kita",
+            },
+            {
+              icon: Building2,
+              label: "Apmokamos kelionės",
+              text: "Kelionės į darbą ir iš darbo apmokamos",
             },
             {
               icon: Award,

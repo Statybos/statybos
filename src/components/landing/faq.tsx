@@ -5,11 +5,15 @@ const faqs = [
   },
   {
     q: "Kaip veikia rotacijos?",
-    a: "Minimali rotacija 8/2 – dirbate sutartą laiką objekte, po to grįžtate namo. Datas deriname iš anksto.",
+    a: "Rotacija gali būti ilgesnė pagal susitarimą, tačiau minimali trukmė – 8 savaitės. Datas deriname iš anksto.",
   },
   {
     q: "Ar darbas legalus?",
     a: "Taip. Pasirašome darbo sutartį, tvarkome A1 formą, mokame mokesčius ir socialines įmokas.",
+  },
+  {
+    q: "Ar apmokate keliones?",
+    a: "Taip. Kelionės į darbą ir iš darbo apmokamos.",
   },
 ];
 

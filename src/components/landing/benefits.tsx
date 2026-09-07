@@ -4,7 +4,7 @@ const items = [
   {
     icon: CalendarRange,
     title: "Lanksčios atostogų rotacijos",
-    text: "Minimali rotacija 8/2. Grafikas planuojamas iš anksto, kad galėtumėte ramiai grįžti namo.",
+    text: "Rotacija gali būti ilgesnė pagal susitarimą, bet minimali trukmė – 8 savaitės. Grafiką planuojame iš anksto.",
     tone: "bg-mint",
   },
   {
@@ -12,6 +12,12 @@ const items = [
     title: "Apgyvendinimas nekainuoja",
     text: "Apgyvendinimas užtikrinamas be papildomų mokesčių.",
     tone: "bg-sky",
+  },
+  {
+    icon: CalendarRange,
+    title: "Apmokame keliones",
+    text: "Kelionės į darbą ir iš darbo apmokamos.",
+    tone: "bg-mint",
   },
   {
     icon: ShieldCheck,

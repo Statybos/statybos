@@ -134,7 +134,8 @@ export function BillingManager({
 
       <div className="mb-4 rounded-2xl bg-mint/60 p-4">
         <p className="font-semibold text-navy">Sąskaitos laikotarpis</p>
-        <p className="mt-1 text-sm text-muted">Pasirinkite savaites, kurias apima sąskaita, ir pažymėkite ją išrašyta.</p>
+          <p className="mt-1 text-sm text-muted">Tai tik vidinis žymėjimas ir priminimas. Tikrų sąskaitų čia nekuriame ir nesiunčiame.</p>
+          <p className="mt-1 text-sm text-muted">Pasirinkite savaites, kurias apima sąskaita, ir pažymėkite laikotarpį kaip išrašytą.</p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <label className="text-sm">Nuo savaitės <input type="number" min={1} max={53} value={fromWeek} onChange={(event) => setFromWeek(event.target.value)} className="ml-1 w-20 rounded-lg border bg-white px-2 py-1.5" /></label>
           <label className="text-sm">Iki savaitės <input type="number" min={1} max={53} value={toWeek} onChange={(event) => setToWeek(event.target.value)} className="ml-1 w-20 rounded-lg border bg-white px-2 py-1.5" /></label>
@@ -180,7 +181,7 @@ export function BillingManager({
                   className="mt-4 inline-flex items-center gap-2 rounded-lg bg-navy px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
                 >
                   <Check className="h-4 w-4" />
-                  Pažymėti išrašyta už {fromWeek}–{toWeek} savaitę
+                  Pažymėti kaip išrašytą už {fromWeek}–{toWeek} savaitę
                 </button>
                 <div className="mt-4 border-t pt-3">
                   <p className="mb-2 inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted"><FileText className="h-3.5 w-3.5" /> Išrašytos sąskaitos</p>
