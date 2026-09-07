@@ -1,11 +1,15 @@
 import Link from "next/link";
+import { prisma } from "@/lib/db";
+import { DEFAULT_CONTACT_PHONE } from "@/lib/constants";
 import { SiteFooter } from "@/components/landing/site-footer";
 import { SiteHeader } from "@/components/landing/site-header";
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const settings = await prisma.siteSettings.findUnique({ where: { id: 1 } });
+
   return (
     <>
-      <SiteHeader />
+      <SiteHeader phone={settings?.contactPhone ?? DEFAULT_CONTACT_PHONE} />
       <main className="mx-auto max-w-3xl flex-1 px-4 py-12">
         <h1 className="text-3xl font-bold text-navy">Privatumo politika</h1>
         <p className="mt-4 text-sm leading-relaxed text-muted">

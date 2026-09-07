@@ -6,6 +6,7 @@ import {
   FileText,
   HardHat,
   LayoutList,
+  Settings,
   Users,
 } from "lucide-react";
 
@@ -15,6 +16,7 @@ const links = [
   { href: "/admin/kandidatai", label: "Kandidatai", icon: LayoutList },
   { href: "/admin/skelbimai", label: "Skelbimai", icon: Briefcase },
   { href: "/admin/saskaitos", label: "Sąskaitų priminimai", icon: FileText },
+  { href: "/admin/nustatymai", label: "Nustatymai", icon: Settings },
 ];
 
 export function AdminSidebar({ pathname }: { pathname: string }) {

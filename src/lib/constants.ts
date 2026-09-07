@@ -1,3 +1,5 @@
+export const DEFAULT_CONTACT_PHONE = "+37060531718";
+
 export const COUNTRIES = [
   "Olandija",
   "Vokietija",

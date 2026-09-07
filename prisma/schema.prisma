@@ -111,6 +111,11 @@ model BillingInvoice {
   @@index([year, fromWeek, toWeek])
 }
 
+model SiteSettings {
+  id          Int    @id @default(1)
+  contactPhone String @default("+37060531718")
+}
+
 model Deployment {
   id         String         @id @default(cuid())
   employeeId String

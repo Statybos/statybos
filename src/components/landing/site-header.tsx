@@ -4,7 +4,7 @@ import Link from "next/link";
 import { HardHat } from "lucide-react";
 import { openApplyForm } from "@/components/landing/apply-form";
 
-export function SiteHeader() {
+export function SiteHeader({ phone }: { phone: string }) {
   return (
     <header className="sticky top-0 z-40 border-b border-navy/10 bg-white/80 text-navy backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
@@ -33,6 +33,9 @@ export function SiteHeader() {
           >
             Administracija
           </Link>
+          <a href={`tel:${phone.replace(/\s+/g, "")}`} className="font-semibold text-navy hover:text-navy-2">
+            {phone}
+          </a>
         </nav>
         <button
           type="button"
