@@ -10,7 +10,7 @@ const items = [
   {
     icon: Home,
     title: "Apgyvendinimas nekainuoja",
-    text: "Apgyvendinimas objekte užtikrinamas be papildomų mokesčių.",
+    text: "Apgyvendinimas užtikrinamas be papildomų mokesčių.",
     tone: "bg-sky",
   },
   {

@@ -1,7 +1,7 @@
 const faqs = [
   {
     q: "Ar apgyvendinimas tikrai nemokamas?",
-    a: "Taip. Apgyvendinimas objekte nekainuoja – būstas užtikrinamas be papildomų mokesčių.",
+    a: "Taip. Apgyvendinimas nekainuoja – būstas užtikrinamas be papildomų mokesčių.",
   },
   {
     q: "Kaip veikia rotacijos?",
