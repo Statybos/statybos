@@ -474,7 +474,8 @@ export function DeploymentPlanner({
                 </button>
               </div>
 
-              <div className="mb-1 grid grid-cols-7 gap-1.5">
+              <div className="mb-1 grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] gap-1.5">
+                <div className="py-1 text-center text-[10px] font-semibold uppercase text-muted">Sav.</div>
                 {WEEKDAYS.map((d) => (
                   <div key={d} className="py-1 text-center text-xs font-semibold uppercase text-muted">
                     {d}
@@ -482,55 +483,65 @@ export function DeploymentPlanner({
                 ))}
               </div>
 
-              <div className="grid grid-cols-7 gap-1.5">
-                {calendarDays.map((day) => {
-                  const inMonth = isSameMonth(day, month);
-                  const present = inMonth ? presentCount(selected.id, day) : 0;
-                  const required = selected.requiredHeadcount;
-                  const tone = inMonth ? staffingTone(present, required) : "grey";
-                  const vac = inMonth ? vacationCount(selected.id, day) : 0;
-                  const isSelected = selectedDay ? isSameDay(day, selectedDay) : false;
-                  const isToday = isSameDay(day, today);
-
+              <div className="space-y-1.5">
+                {Array.from({ length: calendarDays.length / 7 }, (_, weekIndex) => {
+                  const weekDays = calendarDays.slice(weekIndex * 7, weekIndex * 7 + 7);
                   return (
-                    <button
-                      key={day.toISOString()}
-                      type="button"
-                      disabled={!inMonth}
-                      onClick={() => setSelectedDay(day)}
-                      className={`relative flex min-h-[78px] flex-col rounded-xl border p-1.5 text-left transition ${
-                        inMonth ? cellTone[tone] : "bg-transparent border-transparent text-slate-300"
-                      } ${isSelected ? "ring-2 ring-navy ring-offset-1" : ""} ${
-                        isToday && inMonth ? "outline outline-1 outline-navy/40" : ""
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <span className={`text-sm font-semibold ${isToday ? "text-navy" : ""}`}>
-                          {format(day, "d")}
-                        </span>
-                        {inMonth && vac > 0 ? (
-                          <Sun className="h-3.5 w-3.5 text-sky-600" aria-label="Yra atostogų" />
-                        ) : null}
+                    <div key={weekDays[0].toISOString()} className="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] gap-1.5">
+                      <div className="flex min-h-[78px] items-center justify-center rounded-xl bg-sand/70 text-center text-xs font-bold text-navy">
+                        {getISOWeek(weekDays[0])}
                       </div>
-                      {inMonth ? (
-                        <>
-                          <span className="mt-auto text-sm font-bold tabular-nums">
-                            {present}/{required || "–"}
-                          </span>
-                          <span className="text-[10px] leading-tight opacity-70">
-                            {tone === "green"
-                              ? "OK"
-                              : tone === "yellow"
-                                ? "−1"
-                                : tone === "red"
-                                  ? `−${required - present}`
-                                  : tone === "blue"
-                                    ? `+${present - required}`
-                                    : "—"}
-                          </span>
-                        </>
-                      ) : null}
-                    </button>
+                      {weekDays.map((day) => {
+                        const inMonth = isSameMonth(day, month);
+                        const present = inMonth ? presentCount(selected.id, day) : 0;
+                        const required = selected.requiredHeadcount;
+                        const tone = inMonth ? staffingTone(present, required) : "grey";
+                        const vac = inMonth ? vacationCount(selected.id, day) : 0;
+                        const isSelected = selectedDay ? isSameDay(day, selectedDay) : false;
+                        const isToday = isSameDay(day, today);
+
+                        return (
+                          <button
+                            key={day.toISOString()}
+                            type="button"
+                            disabled={!inMonth}
+                            onClick={() => setSelectedDay(day)}
+                            className={`relative flex min-h-[78px] flex-col rounded-xl border p-1.5 text-left transition ${
+                              inMonth ? cellTone[tone] : "bg-transparent border-transparent text-slate-300"
+                            } ${isSelected ? "ring-2 ring-navy ring-offset-1" : ""} ${
+                              isToday && inMonth ? "outline outline-1 outline-navy/40" : ""
+                            }`}
+                          >
+                            <div className="flex items-start justify-between">
+                              <span className={`text-sm font-semibold ${isToday ? "text-navy" : ""}`}>
+                                {format(day, "d")}
+                              </span>
+                              {inMonth && vac > 0 ? (
+                                <Sun className="h-3.5 w-3.5 text-sky-600" aria-label="Yra atostogų" />
+                              ) : null}
+                            </div>
+                            {inMonth ? (
+                              <>
+                                <span className="mt-auto text-sm font-bold tabular-nums">
+                                  {present}/{required || "–"}
+                                </span>
+                                <span className="text-[10px] leading-tight opacity-70">
+                                  {tone === "green"
+                                    ? "OK"
+                                    : tone === "yellow"
+                                      ? "−1"
+                                      : tone === "red"
+                                        ? `−${required - present}`
+                                        : tone === "blue"
+                                          ? `+${present - required}`
+                                          : "—"}
+                                </span>
+                              </>
+                            ) : null}
+                          </button>
+                        );
+                      })}
+                    </div>
                   );
                 })}
               </div>
