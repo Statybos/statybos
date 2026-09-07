@@ -85,7 +85,7 @@ export function CandidateBoard({ candidates }: { candidates: CandidateRow[] }) {
         <table className="min-w-full text-left text-sm">
           <thead className="bg-navy text-white">
             <tr>
-              {["Data", "Vardas Pavardė", "Tel. Nr.", "Miestas", "Specialybė", "Kalbos", "Vair. paž.", "Statusas", "Veiksmai"].map(
+              {["Data", "Vardas Pavardė", "Tel. Nr.", "Miestas", "Kalbos", "Vair. paž.", "Statusas", "Veiksmai"].map(
                 (h) => (
                   <th key={h} className="px-3 py-2 font-medium">
                     {h}
@@ -101,9 +101,8 @@ export function CandidateBoard({ candidates }: { candidates: CandidateRow[] }) {
                   {format(new Date(c.createdAt), "yyyy-MM-dd", { locale: lt })}
                 </td>
                 <td className="px-3 py-2 font-medium">{c.fullName}</td>
-                <td className="px-3 py-2">{c.phone}</td>
+                  <td className="px-3 py-2">{c.phone}</td>
                 <td className="px-3 py-2">{c.cityLt}</td>
-                <td className="px-3 py-2">{c.specialty}</td>
                 <td className="px-3 py-2">{parseJsonArray(c.languages).join(", ")}</td>
                 <td className="px-3 py-2">{c.driverLicense}</td>
                 <td className="px-3 py-2">{candidateStatusLabel(c.status)}</td>
@@ -116,7 +115,7 @@ export function CandidateBoard({ candidates }: { candidates: CandidateRow[] }) {
             ))}
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-muted">
+                <td colSpan={8} className="px-3 py-8 text-center text-muted">
                   Kandidatų nėra
                 </td>
               </tr>
@@ -145,10 +144,6 @@ export function CandidateBoard({ candidates }: { candidates: CandidateRow[] }) {
               <div>
                 <dt className="text-muted">Miestas</dt>
                 <dd>{selected.cityLt}</dd>
-              </div>
-              <div>
-                <dt className="text-muted">Specialybė</dt>
-                <dd>{selected.specialty}</dd>
               </div>
               <div>
                 <dt className="text-muted">Kalbos</dt>
