@@ -3,14 +3,14 @@
 :root {
   --navy: #2f4553;
   --navy-2: #3d5a6c;
-  --amber: #e8a07a;
-  --amber-2: #f0c4a8;
+  --amber: #8bc7b2;
+  --amber-2: #d1eee4;
   --action: #b8dfd1;
   --action-hover: #a2d1c1;
   --sand: #f4f1ec;
   --mint: #e3efe9;
   --sky: #e4eef6;
-  --peach: #f7e6da;
+  --peach: #e8f0f6;
   --ink: #2a3540;
   --muted: #6b7c89;
   --card: #ffffff;
@@ -50,7 +50,7 @@ body {
 .hero-grid {
   background-image:
     linear-gradient(135deg, rgba(47, 69, 83, 0.88), rgba(61, 90, 108, 0.75)),
-    radial-gradient(circle at 85% 15%, rgba(232, 160, 122, 0.45), transparent 42%),
+    radial-gradient(circle at 85% 15%, rgba(139, 199, 178, 0.45), transparent 42%),
     linear-gradient(120deg, #3d5a6c 0%, #5a8f7d 55%, #2f4553 100%);
 }
 
