@@ -30,7 +30,6 @@ import {
   updateObjectHeadcount,
   upsertObject,
 } from "@/app/actions/planner";
-import { COUNTRIES } from "@/lib/constants";
 
 type ObjectRow = {
   id: string;
@@ -370,11 +369,13 @@ export function DeploymentPlanner({
           className="mb-4 grid gap-2 rounded-2xl border bg-white p-3 md:grid-cols-6"
         >
           <input name="title" required placeholder="Pavadinimas" className="rounded-lg border px-2 py-1.5 text-sm" />
-          <select name="country" defaultValue="Suomija" className="rounded-lg border px-2 py-1.5 text-sm">
-            {COUNTRIES.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </select>
+          <input
+            name="country"
+            required
+            defaultValue="Suomija"
+            placeholder="Šalis"
+            className="rounded-lg border px-2 py-1.5 text-sm"
+          />
           <input name="requiredHeadcount" type="number" min={1} defaultValue={9} className="rounded-lg border px-2 py-1.5 text-sm" />
           <input name="address" placeholder="Adresas" className="rounded-lg border px-2 py-1.5 text-sm" />
           <input name="clientName" placeholder="Klientas" className="rounded-lg border px-2 py-1.5 text-sm" />

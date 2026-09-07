@@ -4,7 +4,6 @@ import { Benefits } from "@/components/landing/benefits";
 import { FaqAndReviews } from "@/components/landing/faq";
 import { Hero } from "@/components/landing/hero";
 import { JobListings } from "@/components/landing/job-listings";
-import { SiteFooter } from "@/components/landing/site-footer";
 import { SiteHeader } from "@/components/landing/site-header";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +23,6 @@ export default async function HomePage() {
         <Benefits />
         <FaqAndReviews />
       </main>
-      <SiteFooter />
       <ApplyFormModal />
     </>
   );

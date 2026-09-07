@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ArrowRight, Building2, MapPinned, Plane } from "lucide-react";
+import { ArrowRight, Award, Building2, MapPinned } from "lucide-react";
 import { openApplyForm } from "@/components/landing/apply-form";
 
 export function Hero() {
@@ -35,7 +35,7 @@ export function Hero() {
           <div className="mt-8 flex flex-wrap gap-3">
             <a
               href="#skelbimai"
-              className="inline-flex items-center gap-2 rounded-full bg-amber px-5 py-3 font-semibold text-navy shadow-sm"
+              className="inline-flex items-center gap-2 rounded-full bg-action px-5 py-3 font-semibold text-navy shadow-sm hover:bg-action-hover"
             >
               Peržiūrėti skelbimus
               <ArrowRight className="h-4 w-4" />
@@ -62,7 +62,7 @@ export function Hero() {
               text: "Suomija, Danija, Švedija ir kita",
             },
             {
-              icon: Plane,
+              icon: Award,
               label: "Sertifikatai ir kursai",
               text: "Apmokame visus reikalingus sertifikatus ir kursus",
             },

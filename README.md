@@ -5,7 +5,7 @@ Statybų personalo įdarbinimo ir komandiruočių valdymo platforma (LT).
 ## Stack
 
 - Next.js 16 (App Router) + TypeScript + Tailwind CSS
-- Prisma + SQLite (lengva pradžia; galima perjungti į PostgreSQL/Supabase)
+- Prisma + PostgreSQL (Supabase)
 - JWT cookie autentifikacija admin zonai
 - Server Actions + Zod validacija
 
@@ -21,7 +21,6 @@ npm run dev
 
 - Viešas puslapis: http://localhost:3000
 - Admin: http://localhost:3000/admin/login  
-  Demo: `admin@statybos.lt` / `admin123`
 
 ## Funkcijos
 

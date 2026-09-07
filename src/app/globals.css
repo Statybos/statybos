@@ -5,6 +5,8 @@
   --navy-2: #3d5a6c;
   --amber: #e8a07a;
   --amber-2: #f0c4a8;
+  --action: #b8dfd1;
+  --action-hover: #a2d1c1;
   --sand: #f4f1ec;
   --mint: #e3efe9;
   --sky: #e4eef6;
@@ -19,6 +21,8 @@
   --color-navy-2: var(--navy-2);
   --color-amber: var(--amber);
   --color-amber-2: var(--amber-2);
+  --color-action: var(--action);
+  --color-action-hover: var(--action-hover);
   --color-sand: var(--sand);
   --color-mint: var(--mint);
   --color-sky: var(--sky);

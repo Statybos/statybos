@@ -15,12 +15,16 @@ const faqs = [
 
 const testimonials = [
   {
-    name: "Tomas, elektrikas",
+    name: "Tomas",
     text: "Rotacija 8/2 veikia kaip žadėta, atlyginimas laiku. Apgyvendinimas tvarkingas.",
   },
   {
-    name: "Andrius, mūrininkas",
-    text: "Komanda lietuviška, koordinacija aiški. Rekomenduoju kolegoms.",
+    name: "Andrius",
+    text: "Komanda lietuviška, koordinacija aiški. Rekomenduoju kitiems.",
+  },
+  {
+    name: "Mantas",
+    text: "Geros sąlygos objekte, viskas buvo paaiškinta prieš išvykstant ir atlyginimas mokamas laiku.",
   },
 ];
 

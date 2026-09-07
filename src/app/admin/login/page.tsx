@@ -34,7 +34,6 @@ export default async function LoginPage({
         <button className="mt-4 w-full rounded-full bg-amber py-2.5 font-semibold text-navy">
           Prisijungti
         </button>
-        <p className="mt-3 text-xs text-muted">Demo: admin@statybos.lt / admin123</p>
       </form>
     </div>
   );
