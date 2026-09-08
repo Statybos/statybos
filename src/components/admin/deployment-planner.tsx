@@ -30,6 +30,7 @@ import {
   deleteObject,
   deleteDeployment,
   updateEmployeeObject,
+  updateDeploymentDates,
   updateObjectHeadcount,
   upsertObject,
 } from "@/app/actions/planner";
@@ -134,6 +135,9 @@ export function DeploymentPlanner({
   const [rangeStart, setRangeStart] = useState(toInputDate(new Date()));
   const [rangeEnd, setRangeEnd] = useState(toInputDate(addDays(new Date(), 14)));
   const [notes, setNotes] = useState("");
+  const [editingWorkId, setEditingWorkId] = useState<string | null>(null);
+  const [editStart, setEditStart] = useState("");
+  const [editEnd, setEditEnd] = useState("");
 
   const selected = activeObjects.find((o) => o.id === selectedObjectId) ?? null;
 
@@ -602,7 +606,6 @@ export function DeploymentPlanner({
                             <span className="font-medium">
                               {e.firstName} {e.lastName}
                             </span>
-                            <span className="text-muted"> · {e.specialty}</span>
                           </li>
                         ))}
                       </ul>
@@ -653,7 +656,6 @@ export function DeploymentPlanner({
                                   <p className="text-sm font-medium">
                                     {e.firstName} {e.lastName}
                                   </p>
-                                  <p className="text-xs text-muted">{e.specialty}</p>
                                 </div>
                                 <button
                                   type="button"
@@ -700,7 +702,7 @@ export function DeploymentPlanner({
                   <option value="">Laisvas personalas…</option>
                   {bench.map((e) => (
                     <option key={e.id} value={e.id}>
-                      {e.firstName} {e.lastName} · {e.specialty}
+                      {e.firstName} {e.lastName}
                     </option>
                   ))}
                 </select>
@@ -759,9 +761,7 @@ export function DeploymentPlanner({
                   const work = deployments.find(
                     (d) =>
                       d.employeeId === e.id &&
-                      d.type === "WORK" &&
-                      d.objectId === selected.id &&
-                      dayInRange(today, d.startDate, d.endDate),
+                        d.type === "WORK" && d.objectId === selected.id,
                   );
                   const leave = deployments.find(
                     (d) =>
@@ -807,10 +807,65 @@ export function DeploymentPlanner({
                             {format(new Date(leave.endDate), "yyyy-MM-dd")}
                           </p>
                         ) : work ? (
-                          <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-xs text-amber-900">
-                            <Briefcase className="h-3 w-3" />
-                            Objekte nuo {format(new Date(work.startDate), "yyyy-MM-dd")}
-                          </p>
+                          editingWorkId === work.id ? (
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <input
+                                type="date"
+                                value={editStart}
+                                onChange={(event) => setEditStart(event.target.value)}
+                                className="rounded-lg border px-2 py-1 text-xs"
+                              />
+                              <input
+                                type="date"
+                                value={editEnd}
+                                onChange={(event) => setEditEnd(event.target.value)}
+                                className="rounded-lg border px-2 py-1 text-xs"
+                              />
+                              <button
+                                type="button"
+                                disabled={pending}
+                                onClick={() =>
+                                  start(async () => {
+                                    const result = await updateDeploymentDates(work.id, editStart, editEnd);
+                                    if (result?.error) {
+                                      toast.error(result.error);
+                                      return;
+                                    }
+                                    setEditingWorkId(null);
+                                    toast.success("Objekto datos atnaujintos");
+                                  })
+                                }
+                                className="rounded-lg bg-navy px-2 py-1 text-xs text-white disabled:opacity-50"
+                              >
+                                Išsaugoti
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingWorkId(null)}
+                                className="rounded-lg border px-2 py-1 text-xs"
+                              >
+                                Atšaukti
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="mt-1 flex flex-wrap items-center gap-2">
+                              <p className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-xs text-amber-900">
+                                <Briefcase className="h-3 w-3" />
+                                Objekte {format(new Date(work.startDate), "yyyy-MM-dd")} – {format(new Date(work.endDate), "yyyy-MM-dd")}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingWorkId(work.id);
+                                  setEditStart(toInputDate(new Date(work.startDate)));
+                                  setEditEnd(toInputDate(new Date(work.endDate)));
+                                }}
+                                className="rounded-lg border px-2 py-1 text-xs"
+                              >
+                                Keisti datas
+                              </button>
+                            </div>
+                          )
                         ) : null}
                       </div>
                       <div className="flex gap-2">

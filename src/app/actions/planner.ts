@@ -143,6 +143,39 @@ export async function createDeployment(formData: FormData) {
   return { ok: true as const };
 }
 
+export async function updateDeploymentDates(id: string, startValue: string, endValue: string) {
+  const startDate = new Date(startValue);
+  const endDate = new Date(endValue);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return { error: "Pasirinkite abi datas" };
+  }
+  if (endDate < startDate) {
+    return { error: "Pabaigos data negali būti ankstesnė už pradžią" };
+  }
+
+  const deployment = await prisma.deployment.findUnique({ where: { id } });
+  if (!deployment) return { error: "Priskyrimas nerastas" };
+
+  const overlap = await prisma.deployment.findFirst({
+    where: {
+      id: { not: id },
+      employeeId: deployment.employeeId,
+      type: deployment.type,
+      startDate: { lte: endDate },
+      endDate: { gte: startDate },
+    },
+  });
+  if (overlap) return { error: "Konfliktas: šiomis datomis darbuotojas jau priskirtas." };
+
+  await prisma.deployment.update({
+    where: { id },
+    data: { startDate, endDate },
+  });
+  revalidatePath("/admin/planuoklis");
+  revalidatePath("/admin/darbuotojai");
+  return { ok: true as const };
+}
+
 export async function deleteDeployment(id: string) {
   await prisma.deployment.delete({ where: { id } });
   revalidatePath("/admin/planuoklis");
