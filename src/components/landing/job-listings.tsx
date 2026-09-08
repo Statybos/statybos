@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { MapPin, Wallet } from "lucide-react";
 import { openApplyForm } from "@/components/landing/apply-form";
 
@@ -14,7 +15,30 @@ export type PublicJob = {
   requirements: string;
 };
 
+function getDepartureLabel() {
+  const now = new Date();
+  const isSunday = now.getDay() === 0;
+  const daysUntilSaturday = isSunday ? 6 : 6 - now.getDay();
+  const departure = new Date(now);
+  departure.setDate(now.getDate() + daysUntilSaturday);
+
+  const day = String(departure.getDate()).padStart(2, "0");
+  const month = String(departure.getMonth() + 1).padStart(2, "0");
+  const year = departure.getFullYear();
+  const date = `${day}.${month}.${year}`;
+
+  return isSunday
+    ? `Išvykimas kitą savaitgalį galimas: ${date}`
+    : `Išvykimas šeštadienį ${date}`;
+}
+
 export function JobListings({ jobs }: { jobs: PublicJob[] }) {
+  const departureLabel = useSyncExternalStore(
+    () => () => {},
+    getDepartureLabel,
+    () => "",
+  );
+
   return (
     <section id="skelbimai" className="mx-auto max-w-6xl px-4 py-16">
       <div className="mb-8">
@@ -50,6 +74,9 @@ export function JobListings({ jobs }: { jobs: PublicJob[] }) {
                   {job.salaryText}
                 </span>
               </div>
+              {departureLabel ? (
+                <p className="mt-3 text-sm font-semibold text-navy">{departureLabel}</p>
+              ) : null}
               <p className="mt-3 flex-1 text-sm leading-relaxed text-ink/80">{job.description}</p>
               {job.requirements ? (
                 <p className="mt-3 text-sm text-muted">
