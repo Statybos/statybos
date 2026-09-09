@@ -107,7 +107,7 @@ export function JobListings({ jobs }: { jobs: PublicJob[] }) {
               <button
                 type="button"
                 onClick={() => openApplyForm(job.id)}
-                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#7298e5] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#5f86d7]"
+                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-action px-4 py-3 text-sm font-bold text-navy shadow-sm transition hover:bg-action-hover"
               >
                 Kandidatuoti <span aria-hidden="true">→</span>
               </button>
