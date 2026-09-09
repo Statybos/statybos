@@ -75,6 +75,7 @@ export function EmployeeManager({
   const [objectId, setObjectId] = useState("");
   const [form, setForm] = useState(empty);
   const [open, setOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeRow | null>(null);
   const [wageEditId, setWageEditId] = useState<string | null>(null);
   const [wageDraft, setWageDraft] = useState("");
   const [dismissId, setDismissId] = useState<string | null>(null);
@@ -207,9 +208,13 @@ export function EmployeeManager({
             >
               <div className="mb-3 flex items-start justify-between gap-2">
                 <div>
-                  <h2 className="font-bold text-navy">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedEmployee(e)}
+                    className="text-left font-bold text-navy underline-offset-2 hover:underline"
+                  >
                     {e.firstName} {e.lastName}
-                  </h2>
+                  </button>
                 </div>
               </div>
 
@@ -314,6 +319,95 @@ export function EmployeeManager({
 
       {rows.length === 0 ? (
         <p className="mt-6 text-center text-sm text-muted">Pagal filtrą darbuotojų nėra.</p>
+      ) : null}
+
+      {selectedEmployee ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm text-muted">Darbuotojo informacija</p>
+                <h2 className="text-xl font-bold text-navy">
+                  {selectedEmployee.firstName} {selectedEmployee.lastName}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedEmployee(null)}
+                className="rounded-lg border px-3 py-1.5 text-sm"
+              >
+                Uždaryti
+              </button>
+            </div>
+
+            <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-muted">Telefonas</dt>
+                <dd className="font-medium text-navy">{selectedEmployee.phone || "Nenurodytas"}</dd>
+              </div>
+              <div>
+                <dt className="text-muted">El. paštas</dt>
+                <dd className="break-words font-medium text-navy">
+                  {selectedEmployee.email || "Nenurodytas"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted">Asmens kodas</dt>
+                <dd className="font-medium text-navy">{selectedEmployee.personalCode || "Nenurodytas"}</dd>
+              </div>
+              <div>
+                <dt className="text-muted">Gyvenamasis adresas</dt>
+                <dd className="font-medium text-navy">{selectedEmployee.addressLt || "Nenurodytas"}</dd>
+              </div>
+              <div>
+                <dt className="text-muted">Specialybė</dt>
+                <dd className="font-medium text-navy">{selectedEmployee.specialty}</dd>
+              </div>
+              <div>
+                <dt className="text-muted">Statusas</dt>
+                <dd className="font-medium text-navy">{selectedEmployee.status}</dd>
+              </div>
+              <div>
+                <dt className="text-muted">Valandinis</dt>
+                <dd className="font-medium text-navy">
+                  {selectedEmployee.hourlyRate > 0
+                    ? `${selectedEmployee.hourlyRate.toFixed(2)} €/val.`
+                    : "Nenustatyta"}
+                </dd>
+              </div>
+              {selectedEmployee.dismissedAt ? (
+                <div>
+                  <dt className="text-muted">Atleidimo data</dt>
+                  <dd className="font-medium text-navy">
+                    {format(new Date(selectedEmployee.dismissedAt), "yyyy-MM-dd")}
+                  </dd>
+                </div>
+              ) : null}
+              <div className="sm:col-span-2">
+                <dt className="text-muted">Objektas</dt>
+                <dd className="font-medium text-navy">
+                  {selectedEmployee.assignedObject
+                    ? `${selectedEmployee.assignedObject.country} – ${selectedEmployee.assignedObject.title}`
+                    : "Objektas nepriskirtas"}
+                </dd>
+              </div>
+            </dl>
+
+            <div className="mt-6 flex justify-end border-t pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  edit(selectedEmployee);
+                  setSelectedEmployee(null);
+                }}
+                className="inline-flex items-center gap-1 rounded-lg bg-navy px-3 py-2 text-sm text-white"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Redaguoti
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       {dismissId ? (
