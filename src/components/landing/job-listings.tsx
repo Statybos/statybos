@@ -1,8 +1,9 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { MapPin, Wallet } from "lucide-react";
+import { CalendarDays, Plane, WalletCards } from "lucide-react";
 import { openApplyForm } from "@/components/landing/apply-form";
+import { countryFlag } from "@/lib/constants";
 
 export type PublicJob = {
   id: string;
@@ -55,7 +56,7 @@ export function JobListings({ jobs }: { jobs: PublicJob[] }) {
           {jobs.map((job) => (
             <article
               key={job.id}
-              className="pastel-card flex flex-col rounded-2xl border border-white/70 p-6"
+              className="pastel-card flex flex-col rounded-2xl border border-white/70 p-5"
             >
               {job.specialty ? (
                 <p className="text-xs font-semibold uppercase tracking-wide text-amber">
@@ -63,20 +64,39 @@ export function JobListings({ jobs }: { jobs: PublicJob[] }) {
                 </p>
               ) : null}
               <h3 className="mt-1 text-xl font-bold text-navy">{job.title}</h3>
-              <div className="mt-3 flex flex-wrap gap-4 text-sm text-muted">
-                <span className="inline-flex items-center gap-1">
-                  <MapPin className="h-4 w-4" />
-                  {job.country}
-                  {job.city ? `, ${job.city}` : ""}
+              <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3 border-y border-slate-200/80 py-3 text-sm text-muted">
+                <span className="inline-flex items-center gap-2">
+                  <span className="text-2xl leading-none" aria-hidden="true">
+                    {countryFlag(job.country)}
+                  </span>
+                  <span>
+                    <span className="block text-xs text-muted">Šalis</span>
+                    <span className="font-semibold text-navy">
+                      {job.country}
+                      {job.city ? `, ${job.city}` : ""}
+                    </span>
+                  </span>
                 </span>
-                <span className="inline-flex items-center gap-1">
-                  <Wallet className="h-4 w-4" />
-                  {job.salaryText}
+                <span className="inline-flex items-center gap-2">
+                  <WalletCards className="h-5 w-5 text-sky-600" />
+                  <span>
+                    <span className="block text-xs text-muted">Atlyginimas</span>
+                    <span className="font-semibold text-navy">{job.salaryText}</span>
+                  </span>
                 </span>
+                {departureLabel ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Plane className="h-5 w-5 text-sky-600" />
+                    <span>
+                      <span className="block text-xs text-muted">Išvykimas</span>
+                      <span className="font-semibold text-navy">
+                        <CalendarDays className="mr-1 inline h-3.5 w-3.5" />
+                        {departureLabel.match(/\d{2}\.\d{2}\.\d{4}/)?.[0] ?? departureLabel}
+                      </span>
+                    </span>
+                  </span>
+                ) : null}
               </div>
-              {departureLabel ? (
-                <p className="mt-3 text-sm font-semibold text-navy">{departureLabel}</p>
-              ) : null}
               <p className="mt-3 flex-1 text-sm leading-relaxed text-ink/80">{job.description}</p>
               {job.requirements ? (
                 <p className="mt-3 text-sm text-muted">
@@ -87,9 +107,9 @@ export function JobListings({ jobs }: { jobs: PublicJob[] }) {
               <button
                 type="button"
                 onClick={() => openApplyForm(job.id)}
-                className="mt-5 inline-flex w-fit rounded-full bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-2"
+                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#7298e5] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#5f86d7]"
               >
-                Kandidatuoti
+                Kandidatuoti <span aria-hidden="true">→</span>
               </button>
             </article>
           ))}

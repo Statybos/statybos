@@ -9,6 +9,28 @@ export const COUNTRIES = [
   "Suomija",
 ] as const;
 
+const COUNTRY_FLAGS: Record<string, string> = {
+  belgija: "🇧🇪",
+  danija: "🇩🇰",
+  estija: "🇪🇪",
+  finlandija: "🇫🇮",
+  islandija: "🇮🇸",
+  lietuva: "🇱🇹",
+  norvegija: "🇳🇴",
+  olandija: "🇳🇱",
+  lenkija: "🇵🇱",
+  prancuzija: "🇫🇷",
+  suomija: "🇫🇮",
+  svedija: "🇸🇪",
+  švedija: "🇸🇪",
+  vokietija: "🇩🇪",
+};
+
+export function countryFlag(country: string) {
+  const normalizedCountry = country.trim().toLocaleLowerCase("lt-LT");
+  return COUNTRY_FLAGS[normalizedCountry] ?? "🌍";
+}
+
 export const SPECIALTIES = [
   "Elektrikas",
   "Mūrininkas",
