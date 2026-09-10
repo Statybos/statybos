@@ -342,7 +342,7 @@ export function EmployeeManager({
         {(
           [
             ["ALL", `Visi (${counts.ALL})`],
-            ["UNASSIGNED", `Nepriskirti (${counts.UNASSIGNED})`],
+            ...(!objectId ? (["UNASSIGNED", `Nepriskirti (${counts.UNASSIGNED})`] as const) : []),
             ["TRIP", `Komandiruotėje (${counts.TRIP})`],
             ["ON_LEAVE", `Atostogose (${counts.ON_LEAVE})`],
           ] as const
@@ -350,7 +350,7 @@ export function EmployeeManager({
           <button
             key={key}
             type="button"
-            onClick={() => setView(key)}
+            onClick={() => setView(key as ViewFilter)}
             className={`rounded-full px-3 py-1.5 text-sm ${
               view === key ? "bg-navy text-white" : "bg-white text-ink"
             }`}
@@ -360,7 +360,10 @@ export function EmployeeManager({
         ))}
         <select
           value={objectId}
-          onChange={(e) => setObjectId(e.target.value)}
+          onChange={(e) => {
+            setObjectId(e.target.value);
+            setView("ALL");
+          }}
           className="rounded-full border bg-white px-3 py-1.5 text-sm"
         >
           <option value="">Visi objektai</option>
