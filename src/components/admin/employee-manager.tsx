@@ -132,12 +132,6 @@ function hasCurrentObjectTrip(employee: EmployeeRow, objectId: string) {
   );
 }
 
-function hasCurrentObjectLeave(employee: EmployeeRow, objectId: string) {
-  return employee.deployments.some(
-    (deployment) => isCurrentLeave(deployment) && deployment.objectId === objectId,
-  );
-}
-
 export function EmployeeManager({
   employees,
   objects,
@@ -179,7 +173,7 @@ export function EmployeeManager({
       ).length,
       ON_LEAVE: scopedEmployees.filter((employee) =>
         objectId
-          ? hasCurrentObjectLeave(employee, objectId)
+          ? !hasCurrentObjectTrip(employee, objectId)
           : employee.deployments.some(isCurrentLeave),
       ).length,
     };
@@ -210,7 +204,7 @@ export function EmployeeManager({
       }
       if (
         view === "ON_LEAVE" &&
-        !(objectId ? hasCurrentObjectLeave(e, objectId) : e.deployments.some(isCurrentLeave))
+        !(objectId ? !hasCurrentObjectTrip(e, objectId) : e.deployments.some(isCurrentLeave))
       ) {
         return false;
       }
@@ -326,7 +320,7 @@ export function EmployeeManager({
             ["ALL", `Visi (${counts.ALL})`],
             ["TRIP", `Komandiruotėje (${counts.TRIP})`],
             ["ON_LEAVE", `Atostogos (${counts.ON_LEAVE})`],
-            ["UNASSIGNED", `Nepriskirti (${counts.UNASSIGNED})`],
+            ...(!objectId ? (["UNASSIGNED", `Nepriskirti (${counts.UNASSIGNED})`] as const) : []),
           ] as const
         ).map(([key, label]) => (
           <button
