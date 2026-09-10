@@ -96,7 +96,7 @@ function isCurrentDeployment(deployment: DeploymentRow) {
 }
 
 function isEmployeeTrip(deployment: DeploymentRow) {
-  return deployment.type === "PERSONAL_TRIP" || (deployment.type === "WORK" && !deployment.object);
+  return deployment.type === "PERSONAL_TRIP";
 }
 
 function currentDeploymentForEmployee(employee: EmployeeRow) {
@@ -104,31 +104,6 @@ function currentDeploymentForEmployee(employee: EmployeeRow) {
     (deployment) =>
       isCurrentDeployment(deployment) &&
       isEmployeeTrip(deployment),
-  );
-}
-
-function isCurrentLeave(deployment: DeploymentRow) {
-  const now = new Date();
-  return (
-    deployment.isActive &&
-    (deployment.type === "VACATION_LT" || deployment.type === "TRANSIT") &&
-    new Date(deployment.startDate) <= now &&
-    (!deployment.endDate || new Date(deployment.endDate) >= now)
-  );
-}
-
-function hasCurrentObjectDeployment(employee: EmployeeRow, objectId: string) {
-  return employee.deployments.some(
-    (deployment) => isCurrentDeployment(deployment) && deployment.objectId === objectId,
-  );
-}
-
-function hasCurrentObjectTrip(employee: EmployeeRow, objectId: string) {
-  return employee.deployments.some(
-    (deployment) =>
-      isCurrentDeployment(deployment) &&
-      deployment.type === "WORK" &&
-      deployment.objectId === objectId,
   );
 }
 
@@ -155,26 +130,20 @@ export function EmployeeManager({
 
   const counts = useMemo(() => {
     const scopedEmployees = objectId
-      ? employees.filter(
-          (employee) =>
-            employee.assignedObjectId === objectId ||
-            hasCurrentObjectDeployment(employee, objectId),
-        )
+      ? employees.filter((employee) => employee.assignedObjectId === objectId)
       : employees;
     return {
       ALL: scopedEmployees.length,
       UNASSIGNED: employees.filter((employee) => !employee.assignedObjectId).length,
       TRIP: scopedEmployees.filter((employee) =>
-        objectId
-          ? hasCurrentObjectTrip(employee, objectId)
-          : employee.deployments.some(
-              (deployment) => isEmployeeTrip(deployment) && isCurrentDeployment(deployment),
-            ),
+        employee.deployments.some(
+          (deployment) => isEmployeeTrip(deployment) && isCurrentDeployment(deployment),
+        ),
       ).length,
       ON_LEAVE: scopedEmployees.filter((employee) =>
-        objectId
-          ? !hasCurrentObjectTrip(employee, objectId)
-          : employee.deployments.some(isCurrentLeave),
+        !employee.deployments.some(
+          (deployment) => isEmployeeTrip(deployment) && isCurrentDeployment(deployment),
+        ),
       ).length,
     };
   }, [employees, objectId]);
@@ -185,8 +154,7 @@ export function EmployeeManager({
       if (
         objectId &&
         view !== "UNASSIGNED" &&
-        e.assignedObjectId !== objectId &&
-        !hasCurrentObjectDeployment(e, objectId)
+        e.assignedObjectId !== objectId
       ) {
         return false;
       }
@@ -195,17 +163,17 @@ export function EmployeeManager({
       }
       if (
         view === "TRIP" &&
-        !(objectId
-          ? hasCurrentObjectTrip(e, objectId)
-          : e.deployments.some(
-              (deployment) => isEmployeeTrip(deployment) && isCurrentDeployment(deployment),
-            ))
+        !e.deployments.some(
+          (deployment) => isEmployeeTrip(deployment) && isCurrentDeployment(deployment),
+        )
       ) {
         return false;
       }
       if (
         view === "ON_LEAVE" &&
-        !(objectId ? !hasCurrentObjectTrip(e, objectId) : e.deployments.some(isCurrentLeave))
+        !e.deployments.some(
+          (deployment) => isEmployeeTrip(deployment) && isCurrentDeployment(deployment),
+        )
       ) {
         return false;
       }
