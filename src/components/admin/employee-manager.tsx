@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { format } from "date-fns";
+import { differenceInCalendarDays, format } from "date-fns";
 import { toast } from "sonner";
 import { Euro, MapPin, Phone, Pencil, Plane, Trash2, UserX } from "lucide-react";
 import {
@@ -50,7 +50,7 @@ type EmployeeRow = {
   deployments: DeploymentRow[];
 };
 
-type ViewFilter = "ALL" | "TRIP" | "ON_LEAVE";
+type ViewFilter = "ALL" | "UNASSIGNED" | "TRIP" | "ON_LEAVE";
 
 const empty = {
   id: "",
@@ -83,7 +83,7 @@ function parseHistory(raw: string): WageChange[] {
 function deploymentDays(deployment: DeploymentRow) {
   const start = new Date(deployment.startDate);
   const end = deployment.endDate ? new Date(deployment.endDate) : new Date();
-  return Math.max(1, Math.floor((end.getTime() - start.getTime()) / 86400000) + 1);
+  return Math.max(1, differenceInCalendarDays(end, start) + 1);
 }
 
 function isCurrentDeployment(deployment: DeploymentRow) {
@@ -112,7 +112,7 @@ function currentDeploymentForEmployee(employee: EmployeeRow) {
   return employee.deployments.find(
     (deployment) =>
       isCurrentDeployment(deployment) &&
-      (isEmployeeTrip(deployment) || deployment.type === "WORK"),
+      isEmployeeTrip(deployment),
   );
 }
 
@@ -178,6 +178,9 @@ export function EmployeeManager({
       : employees;
     return {
       ALL: scopedEmployees.length,
+      UNASSIGNED: scopedEmployees.filter((employee) =>
+        employee.status !== "INACTIVE" && !employee.assignedObjectId,
+      ).length,
       TRIP: scopedEmployees.filter((employee) =>
         objectId
           ? hasCurrentObjectTrip(employee, objectId)
@@ -200,6 +203,12 @@ export function EmployeeManager({
         objectId &&
         e.assignedObjectId !== objectId &&
         !hasCurrentObjectDeployment(e, objectId)
+      ) {
+        return false;
+      }
+      if (
+        view === "UNASSIGNED" &&
+        (e.status === "INACTIVE" || e.assignedObjectId)
       ) {
         return false;
       }
@@ -329,6 +338,7 @@ export function EmployeeManager({
         {(
           [
             ["ALL", `Visi (${counts.ALL})`],
+            ...(!objectId ? (["UNASSIGNED", `Nepriskirti (${counts.UNASSIGNED})`] as const) : []),
             ["TRIP", `Komandiruotėje (${counts.TRIP})`],
             ["ON_LEAVE", `Atostogose (${counts.ON_LEAVE})`],
           ] as const
