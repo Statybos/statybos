@@ -27,12 +27,14 @@ export async function submitApplication(formData: FormData) {
 
   let specialty = "Nenurodyta";
   let jobTitle: string | null = null;
+  let jobCountry: string | null = null;
   if (data.jobId) {
     const job = await prisma.jobPosting.findUnique({
       where: { id: data.jobId },
-      select: { specialty: true, title: true },
+      select: { specialty: true, title: true, country: true },
     });
     jobTitle = job?.title ?? null;
+    jobCountry = job?.country ?? null;
     if (job?.specialty) specialty = job.specialty;
     else if (job?.title) specialty = job.title;
   }
@@ -44,6 +46,7 @@ export async function submitApplication(formData: FormData) {
       cityLt: data.cityLt,
       specialty,
       jobTitle,
+      jobCountry,
       driverLicense: data.driverLicense,
       languages: JSON.stringify([`Anglų: ${data.english}`]),
       availableFrom: data.availableFrom ? new Date(data.availableFrom) : null,

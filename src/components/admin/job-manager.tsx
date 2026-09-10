@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { deleteJob, toggleJobActive, upsertJob } from "@/app/actions/jobs";
+import { countryFlag } from "@/lib/constants";
 
 type Job = {
   id: string;
@@ -56,6 +57,7 @@ export function JobManager({ jobs }: { jobs: Job[] }) {
             <div>
               <p className="font-semibold">{job.title}</p>
               <p className="text-sm text-muted">
+                <span className="mr-1" aria-hidden="true">{countryFlag(job.country)}</span>
                 {job.country}
                 {job.city ? `, ${job.city}` : ""} · {job.salaryText} ·{" "}
                 {job.isActive ? "Aktyvus" : "Juodraštis"}

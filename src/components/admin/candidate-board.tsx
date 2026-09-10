@@ -10,7 +10,7 @@ import {
   updateCandidateStatus,
 } from "@/app/actions/candidates";
 import { toast } from "sonner";
-import { CANDIDATE_STATUSES, candidateStatusLabel } from "@/lib/constants";
+import { CANDIDATE_STATUSES, candidateStatusLabel, countryFlag } from "@/lib/constants";
 import { parseJsonArray, parseNotes } from "@/lib/utils";
 
 type CandidateRow = {
@@ -28,7 +28,8 @@ type CandidateRow = {
   createdAt: string;
   availableFrom: string | null;
   jobTitle: string | null;
-  job: { title: string } | null;
+  jobCountry: string | null;
+  job: { title: string; country: string } | null;
 };
 
 export function CandidateBoard({ candidates }: { candidates: CandidateRow[] }) {
@@ -60,9 +61,11 @@ export function CandidateBoard({ candidates }: { candidates: CandidateRow[] }) {
 
   function jobDisplay(candidate: CandidateRow) {
     const title = candidate.job?.title ?? candidate.jobTitle;
-    if (!title) return null;
+    const country = candidate.job?.country ?? candidate.jobCountry;
+    if (!title && !country) return null;
     return {
-      title,
+      title: title ?? "Bendras kandidatas",
+      country,
       deleted: !candidate.job,
     };
   }
@@ -121,11 +124,16 @@ export function CandidateBoard({ candidates }: { candidates: CandidateRow[] }) {
                   {format(new Date(c.createdAt), "yyyy-MM-dd", { locale: lt })}
                 </td>
                 <td className="px-3 py-2 font-medium">{c.fullName}</td>
-                  <td className="px-3 py-2">{c.phone}</td>
+                <td className="px-3 py-2">{c.phone}</td>
                 <td className="px-3 py-2">{c.cityLt}</td>
                 <td className="px-3 py-2">
                   {jobDisplay(c) ? (
                     <span>
+                      {jobDisplay(c)?.country ? (
+                        <span className="mr-1" aria-hidden="true">
+                          {countryFlag(jobDisplay(c)?.country ?? "")}
+                        </span>
+                      ) : null}
                       {jobDisplay(c)?.title}
                       {jobDisplay(c)?.deleted ? (
                         <span className="block text-xs text-muted">Nebėra skelbimo</span>
@@ -164,7 +172,14 @@ export function CandidateBoard({ candidates }: { candidates: CandidateRow[] }) {
                 <h2 className="text-xl font-bold">{selected.fullName}</h2>
                 {jobDisplay(selected) ? (
                   <>
-                    <p className="text-sm text-muted">{jobDisplay(selected)?.title}</p>
+                    <p className="text-sm text-muted">
+                      {jobDisplay(selected)?.country ? (
+                        <span className="mr-1" aria-hidden="true">
+                          {countryFlag(jobDisplay(selected)?.country ?? "")}
+                        </span>
+                      ) : null}
+                      {jobDisplay(selected)?.title}
+                    </p>
                     {jobDisplay(selected)?.deleted ? (
                       <p className="text-xs text-muted">Nebėra skelbimo</p>
                     ) : null}
