@@ -125,7 +125,9 @@ model Deployment {
   objectId   String?
   object     ProjectObject? @relation(fields: [objectId], references: [id], onDelete: SetNull)
   startDate  DateTime
-  endDate    DateTime
+  endDate    DateTime?
+  closedAt   DateTime?
+  isActive   Boolean        @default(true)
   type       String
   notes      String         @default("")
 }

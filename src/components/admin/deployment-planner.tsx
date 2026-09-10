@@ -60,7 +60,7 @@ type DeploymentRow = {
   employeeId: string;
   objectId: string | null;
   startDate: string;
-  endDate: string;
+  endDate: string | null;
   type: string;
   notes: string;
   employee: { firstName: string; lastName: string; specialty: string };
@@ -73,9 +73,9 @@ function toInputDate(d: Date) {
   return format(d, "yyyy-MM-dd");
 }
 
-function dayInRange(day: Date, startIso: string, endIso: string) {
+function dayInRange(day: Date, startIso: string, endIso: string | null) {
   const start = startOfDay(new Date(startIso));
-  const end = startOfDay(new Date(endIso));
+  const end = startOfDay(endIso ? new Date(endIso) : new Date());
   return day >= start && day <= end;
 }
 
@@ -240,7 +240,7 @@ export function DeploymentPlanner({
       if (leave) {
         onLeave.push({
           employee: emp,
-          until: leave.endDate,
+          until: leave.endDate ?? toInputDate(today),
           type: leave.type,
         });
       } else {
@@ -804,7 +804,7 @@ export function DeploymentPlanner({
                           <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 text-xs text-sky-800">
                             <Sun className="h-3 w-3" />
                             Atostogose {format(new Date(leave.startDate), "yyyy-MM-dd")} –{" "}
-                            {format(new Date(leave.endDate), "yyyy-MM-dd")}
+                            {leave.endDate ? format(new Date(leave.endDate), "yyyy-MM-dd") : "vyksta"}
                           </p>
                         ) : work ? (
                           editingWorkId === work.id ? (
@@ -851,14 +851,14 @@ export function DeploymentPlanner({
                             <div className="mt-1 flex flex-wrap items-center gap-2">
                               <p className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-xs text-amber-900">
                                 <Briefcase className="h-3 w-3" />
-                                Objekte {format(new Date(work.startDate), "yyyy-MM-dd")} – {format(new Date(work.endDate), "yyyy-MM-dd")}
+                                Objekte {format(new Date(work.startDate), "yyyy-MM-dd")} – {work.endDate ? format(new Date(work.endDate), "yyyy-MM-dd") : "vyksta"}
                               </p>
                               <button
                                 type="button"
                                 onClick={() => {
                                   setEditingWorkId(work.id);
                                   setEditStart(toInputDate(new Date(work.startDate)));
-                                  setEditEnd(toInputDate(new Date(work.endDate)));
+                                  setEditEnd(work.endDate ? toInputDate(new Date(work.endDate)) : toInputDate(today));
                                 }}
                                 className="rounded-lg border px-2 py-1 text-xs"
                               >

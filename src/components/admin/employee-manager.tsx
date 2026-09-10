@@ -3,18 +3,33 @@
 import { useMemo, useState, useTransition } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { Euro, MapPin, Phone, Pencil, UserX } from "lucide-react";
+import { Euro, MapPin, Phone, Pencil, Plane, Trash2, UserX } from "lucide-react";
 import {
   deleteEmployee,
   dismissEmployee,
   updateEmployeeWage,
   upsertEmployee,
 } from "@/app/actions/employees";
+import {
+  closeEmployeeDeployment,
+  deleteDeployment,
+  startEmployeeDeployment,
+} from "@/app/actions/planner";
 import { SPECIALTIES } from "@/lib/constants";
 
 type ObjectOpt = { id: string; title: string; country: string };
 
 type WageChange = { rate: number; changedAt: string };
+type DeploymentRow = {
+  id: string;
+  startDate: string;
+  endDate: string | null;
+  closedAt: string | null;
+  isActive: boolean;
+  type: string;
+  notes: string;
+  object: { title: string; country: string } | null;
+};
 
 type EmployeeRow = {
   id: string;
@@ -31,6 +46,7 @@ type EmployeeRow = {
   dismissedAt: string | null;
   assignedObjectId: string | null;
   assignedObject: { title: string; country: string } | null;
+  deployments: DeploymentRow[];
 };
 
 type ViewFilter = "ALL" | "ON_LEAVE" | "INACTIVE" | "ACTIVE";
@@ -63,6 +79,16 @@ function parseHistory(raw: string): WageChange[] {
   }
 }
 
+function deploymentDays(deployment: DeploymentRow) {
+  const start = new Date(deployment.startDate);
+  const end = deployment.endDate ? new Date(deployment.endDate) : new Date();
+  return Math.max(1, Math.floor((end.getTime() - start.getTime()) / 86400000) + 1);
+}
+
+function isCurrentDeployment(deployment: DeploymentRow) {
+  return deployment.isActive && (!deployment.endDate || new Date(deployment.endDate) >= new Date());
+}
+
 export function EmployeeManager({
   employees,
   objects,
@@ -76,6 +102,9 @@ export function EmployeeManager({
   const [form, setForm] = useState(empty);
   const [open, setOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeRow | null>(null);
+  const [tripStartDate, setTripStartDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const [tripObjectId, setTripObjectId] = useState("");
+  const [tripNotes, setTripNotes] = useState("");
   const [wageEditId, setWageEditId] = useState<string | null>(null);
   const [wageDraft, setWageDraft] = useState("");
   const [dismissId, setDismissId] = useState<string | null>(null);
@@ -121,6 +150,50 @@ export function EmployeeManager({
       dismissedAt: isoDate(e.dismissedAt),
     });
     setOpen(true);
+  }
+
+  function openEmployee(e: EmployeeRow) {
+    setSelectedEmployee(e);
+    setTripStartDate(format(new Date(), "yyyy-MM-dd"));
+    setTripObjectId(e.assignedObjectId ?? objects[0]?.id ?? "");
+    setTripNotes("");
+  }
+
+  function startTrip() {
+    if (!selectedEmployee) return;
+    const fd = new FormData();
+    fd.set("employeeId", selectedEmployee.id);
+    fd.set("objectId", tripObjectId);
+    fd.set("startDate", tripStartDate);
+    fd.set("notes", tripNotes);
+    start(async () => {
+      const result = await startEmployeeDeployment(fd);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Komandiruotė pradėta");
+      setTripNotes("");
+    });
+  }
+
+  function closeTrip(deploymentId: string) {
+    start(async () => {
+      const result = await closeEmployeeDeployment(deploymentId);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Komandiruotė uždaryta");
+    });
+  }
+
+  function removeTrip(deploymentId: string) {
+    if (!window.confirm("Ištrinti šią komandiruotę iš istorijos?")) return;
+    start(async () => {
+      await deleteDeployment(deploymentId);
+      toast.success("Komandiruotė ištrinta");
+    });
   }
 
   function saveWage(id: string) {
@@ -200,6 +273,9 @@ export function EmployeeManager({
         {rows.map((e) => {
           const history = parseHistory(e.wageHistory);
           const lastChange = history[0];
+          const activeDeployment = e.deployments.find(
+            (deployment) => deployment.type === "WORK" && isCurrentDeployment(deployment),
+          );
           const editingWage = wageEditId === e.id;
           return (
             <article
@@ -210,13 +286,25 @@ export function EmployeeManager({
                 <div>
                   <button
                     type="button"
-                    onClick={() => setSelectedEmployee(e)}
+                    onClick={() => openEmployee(e)}
                     className="text-left font-bold text-navy underline-offset-2 hover:underline"
                   >
                     {e.firstName} {e.lastName}
                   </button>
                 </div>
+                <span
+                  title={activeDeployment ? "Aktyvi komandiruotė" : "Nėra aktyvios komandiruotės"}
+                  className={activeDeployment ? "text-orange-500" : "text-emerald-600"}
+                >
+                  <Plane className="h-5 w-5" />
+                </span>
               </div>
+
+              {activeDeployment ? (
+                <p className="mb-2 text-xs font-medium text-orange-700">
+                  Komandiruotėje {deploymentDays(activeDeployment)} d. nuo {format(new Date(activeDeployment.startDate), "yyyy-MM-dd")}
+                </p>
+              ) : null}
 
               <div className="space-y-1.5 text-sm text-muted">
                 <p className="inline-flex items-center gap-1.5">
@@ -384,6 +472,113 @@ export function EmployeeManager({
                 </dd>
               </div>
             </dl>
+
+            <section className="mt-6 border-t pt-4">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="font-semibold text-navy">Komandiruotė</h3>
+                {selectedEmployee.deployments.some(
+                  (deployment) => deployment.type === "WORK" && isCurrentDeployment(deployment),
+                ) ? (
+                  <span className="inline-flex items-center gap-1 text-sm font-semibold text-orange-600">
+                    <Plane className="h-4 w-4" /> Vyksta
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-600">
+                    <Plane className="h-4 w-4" /> Nėra
+                  </span>
+                )}
+              </div>
+              {!selectedEmployee.deployments.some(
+                (deployment) => deployment.type === "WORK" && isCurrentDeployment(deployment),
+              ) && selectedEmployee.status !== "INACTIVE" ? (
+                <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                  <select
+                    value={tripObjectId}
+                    onChange={(event) => setTripObjectId(event.target.value)}
+                    className="rounded-lg border px-3 py-2 text-sm"
+                  >
+                    <option value="">Pasirinkite objektą</option>
+                    {objects.map((object) => (
+                      <option key={object.id} value={object.id}>
+                        {object.country} – {object.title}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="date"
+                    value={tripStartDate}
+                    onChange={(event) => setTripStartDate(event.target.value)}
+                    className="rounded-lg border px-3 py-2 text-sm"
+                  />
+                  <button
+                    type="button"
+                    disabled={pending || !tripObjectId}
+                    onClick={startTrip}
+                    className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  >
+                    Pradėti
+                  </button>
+                  <input
+                    value={tripNotes}
+                    onChange={(event) => setTripNotes(event.target.value)}
+                    placeholder="Pastaba (nebūtina)"
+                    className="rounded-lg border px-3 py-2 text-sm sm:col-span-3"
+                  />
+                </div>
+              ) : null}
+            </section>
+
+            <section className="mt-5">
+              <h3 className="font-semibold text-navy">Komandiruočių istorija</h3>
+              {selectedEmployee.deployments.filter((deployment) => deployment.type === "WORK").length === 0 ? (
+                <p className="mt-2 text-sm text-muted">Komandiruočių dar nėra.</p>
+              ) : (
+                <div className="mt-2 space-y-2">
+                  {selectedEmployee.deployments
+                    .filter((deployment) => deployment.type === "WORK")
+                    .map((deployment) => (
+                      <div key={deployment.id} className="rounded-lg border p-3 text-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-medium text-navy">
+                              {deployment.object
+                                ? `${deployment.object.country} – ${deployment.object.title}`
+                                : "Objektas ištrintas"}
+                            </p>
+                            <p className="text-muted">
+                              {format(new Date(deployment.startDate), "yyyy-MM-dd")} – {deployment.endDate ? format(new Date(deployment.endDate), "yyyy-MM-dd") : "vyksta"}
+                              <span className="ml-2 font-medium">({deploymentDays(deployment)} d.)</span>
+                            </p>
+                            {deployment.notes ? <p className="mt-1 text-xs text-muted">{deployment.notes}</p> : null}
+                          </div>
+                          <div className="flex shrink-0 gap-2">
+                            {deployment.isActive && isCurrentDeployment(deployment) ? (
+                              <button
+                                type="button"
+                                disabled={pending}
+                                onClick={() => closeTrip(deployment.id)}
+                                className="rounded-lg bg-navy px-2 py-1 text-xs text-white disabled:opacity-50"
+                              >
+                                Uždaryti
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={pending}
+                                onClick={() => removeTrip(deployment.id)}
+                                className="rounded-lg border border-red-200 p-1.5 text-red-600 disabled:opacity-50"
+                                title="Ištrinti iš istorijos"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </section>
 
             <div className="mt-6 flex justify-end border-t pt-4">
               <button

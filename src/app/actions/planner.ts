@@ -143,6 +143,86 @@ export async function createDeployment(formData: FormData) {
   return { ok: true as const };
 }
 
+export async function startEmployeeDeployment(formData: FormData) {
+  const employeeId = String(formData.get("employeeId") ?? "");
+  const objectId = String(formData.get("objectId") ?? "");
+  const startDate = new Date(String(formData.get("startDate") ?? ""));
+  const notes = String(formData.get("notes") ?? "").trim();
+
+  if (!employeeId || !objectId || Number.isNaN(startDate.getTime())) {
+    return { error: "Pasirinkite objektą ir komandiruotės pradžios datą" };
+  }
+
+  const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
+  if (!employee) return { error: "Darbuotojas nerastas" };
+  if (employee.status === "INACTIVE") return { error: "Atleistam darbuotojui komandiruotės pradėti negalima" };
+
+  const object = await prisma.projectObject.findUnique({ where: { id: objectId } });
+  if (!object) return { error: "Objektas nerastas" };
+
+  const activeDeployment = await prisma.deployment.findFirst({
+    where: {
+      employeeId,
+      type: "WORK",
+      isActive: true,
+      OR: [{ endDate: null }, { endDate: { gte: new Date() } }],
+    },
+  });
+  if (activeDeployment) return { error: "Darbuotojas jau yra aktyvioje komandiruotėje" };
+
+  await prisma.deployment.create({
+    data: {
+      employeeId,
+      objectId,
+      startDate,
+      endDate: null,
+      type: "WORK",
+      notes,
+      isActive: true,
+    },
+  });
+  await prisma.employee.update({
+    where: { id: employeeId },
+    data: { status: "ON_SITE", assignedObjectId: objectId },
+  });
+
+  revalidatePath("/admin/darbuotojai");
+  revalidatePath("/admin/planuoklis");
+  return { ok: true as const };
+}
+
+export async function closeEmployeeDeployment(id: string) {
+  const deployment = await prisma.deployment.findUnique({ where: { id } });
+  if (!deployment) return { error: "Komandiruotė nerasta" };
+  if (!deployment.isActive) return { error: "Komandiruotė jau uždaryta" };
+
+  const closedAt = new Date();
+  await prisma.deployment.update({
+    where: { id },
+    data: { isActive: false, closedAt, endDate: closedAt },
+  });
+
+  const activeDeployment = await prisma.deployment.findFirst({
+    where: {
+      employeeId: deployment.employeeId,
+      type: "WORK",
+      isActive: true,
+      OR: [{ endDate: null }, { endDate: { gte: new Date() } }],
+    },
+    orderBy: { startDate: "desc" },
+  });
+  await prisma.employee.update({
+    where: { id: deployment.employeeId },
+    data: activeDeployment
+      ? { status: "ON_SITE", assignedObjectId: activeDeployment.objectId }
+      : { status: "BENCH_LT", assignedObjectId: null },
+  });
+
+  revalidatePath("/admin/darbuotojai");
+  revalidatePath("/admin/planuoklis");
+  return { ok: true as const };
+}
+
 export async function updateDeploymentDates(id: string, startValue: string, endValue: string) {
   const startDate = new Date(startValue);
   const endDate = new Date(endValue);

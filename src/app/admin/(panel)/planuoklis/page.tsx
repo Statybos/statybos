@@ -34,7 +34,7 @@ export default async function PlannerPage() {
       deployments={deployments.map((d) => ({
         ...d,
         startDate: d.startDate.toISOString(),
-        endDate: d.endDate.toISOString(),
+        endDate: d.endDate?.toISOString() ?? null,
       }))}
     />
   );
