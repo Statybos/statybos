@@ -22,6 +22,7 @@ type ObjectOpt = { id: string; title: string; country: string };
 type WageChange = { rate: number; changedAt: string };
 type DeploymentRow = {
   id: string;
+  objectId: string | null;
   startDate: string;
   endDate: string | null;
   closedAt: string | null;
@@ -49,7 +50,7 @@ type EmployeeRow = {
   deployments: DeploymentRow[];
 };
 
-type ViewFilter = "ALL" | "UNASSIGNED" | "TRIP" | "ON_LEAVE" | "INACTIVE";
+type ViewFilter = "ALL" | "UNASSIGNED" | "TRIP" | "ON_LEAVE";
 
 const empty = {
   id: "",
@@ -98,6 +99,23 @@ function isEmployeeTrip(deployment: DeploymentRow) {
   return deployment.type === "PERSONAL_TRIP" || (deployment.type === "WORK" && !deployment.object);
 }
 
+function currentDeploymentForObject(employee: EmployeeRow, objectId: string) {
+  return employee.deployments.find(
+    (deployment) =>
+      isCurrentDeployment(deployment) &&
+      deployment.type === "WORK" &&
+      deployment.objectId === objectId,
+  );
+}
+
+function currentDeploymentForEmployee(employee: EmployeeRow) {
+  return employee.deployments.find(
+    (deployment) =>
+      isCurrentDeployment(deployment) &&
+      (isEmployeeTrip(deployment) || deployment.type === "WORK"),
+  );
+}
+
 function isCurrentLeave(deployment: DeploymentRow) {
   const now = new Date();
   return (
@@ -135,7 +153,6 @@ export function EmployeeManager({
       UNASSIGNED: employees.filter((e) => e.status !== "INACTIVE" && !e.assignedObjectId).length,
       TRIP: employees.filter((e) => e.deployments.some((deployment) => isEmployeeTrip(deployment) && isCurrentDeployment(deployment))).length,
       ON_LEAVE: employees.filter((e) => e.deployments.some(isCurrentLeave)).length,
-      INACTIVE: employees.filter((e) => e.status === "INACTIVE").length,
     };
   }, [employees]);
 
@@ -145,7 +162,6 @@ export function EmployeeManager({
       if (view === "UNASSIGNED" && (e.status === "INACTIVE" || e.assignedObjectId)) return false;
       if (view === "TRIP" && !e.deployments.some((deployment) => isEmployeeTrip(deployment) && isCurrentDeployment(deployment))) return false;
       if (view === "ON_LEAVE" && !e.deployments.some(isCurrentLeave)) return false;
-      if (view === "INACTIVE" && e.status !== "INACTIVE") return false;
       if (objectId && e.assignedObjectId !== objectId) return false;
       if (!query) return true;
       return `${e.firstName} ${e.lastName} ${e.phone} ${e.personalCode} ${e.specialty} ${e.assignedObject?.title ?? ""}`
@@ -260,7 +276,6 @@ export function EmployeeManager({
             ["UNASSIGNED", `Nepriskirti (${counts.UNASSIGNED})`],
             ["TRIP", `Komandiruotėje (${counts.TRIP})`],
             ["ON_LEAVE", `Atostogose (${counts.ON_LEAVE})`],
-            ["INACTIVE", `Neaktyvūs (${counts.INACTIVE})`],
           ] as const
         ).map(([key, label]) => (
           <button
@@ -292,9 +307,9 @@ export function EmployeeManager({
         {rows.map((e) => {
           const history = parseHistory(e.wageHistory);
           const lastChange = history[0];
-          const activeDeployment = e.deployments.find(
-            (deployment) => isEmployeeTrip(deployment) && isCurrentDeployment(deployment),
-          );
+          const activeDeployment = objectId
+            ? currentDeploymentForObject(e, objectId)
+            : currentDeploymentForEmployee(e);
           const editingWage = wageEditId === e.id;
           return (
             <article
