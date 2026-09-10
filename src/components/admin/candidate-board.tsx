@@ -223,9 +223,7 @@ export function CandidateBoard({ candidates }: { candidates: CandidateRow[] }) {
               <a href={selected.cvUrl} className="mt-3 inline-block text-sm text-navy underline" target="_blank">
                 Atsisiųsti CV
               </a>
-            ) : (
-              <p className="mt-3 text-sm text-muted">CV neįkeltas</p>
-            )}
+            ) : null}
 
             <div className="mt-5 space-y-3">
               <label className="grid gap-1 text-sm font-medium">
