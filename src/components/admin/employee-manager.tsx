@@ -163,7 +163,7 @@ export function EmployeeManager({
       : employees;
     return {
       ALL: scopedEmployees.length,
-      UNASSIGNED: scopedEmployees.filter((employee) => !employee.assignedObjectId).length,
+      UNASSIGNED: employees.filter((employee) => !employee.assignedObjectId).length,
       TRIP: scopedEmployees.filter((employee) =>
         objectId
           ? hasCurrentObjectTrip(employee, objectId)
@@ -184,6 +184,7 @@ export function EmployeeManager({
     return employees.filter((e) => {
       if (
         objectId &&
+        view !== "UNASSIGNED" &&
         e.assignedObjectId !== objectId &&
         !hasCurrentObjectDeployment(e, objectId)
       ) {
@@ -320,7 +321,7 @@ export function EmployeeManager({
             ["ALL", `Visi (${counts.ALL})`],
             ["TRIP", `Komandiruotėje (${counts.TRIP})`],
             ["ON_LEAVE", `Atostogos (${counts.ON_LEAVE})`],
-            ...(!objectId ? (["UNASSIGNED", `Nepriskirti (${counts.UNASSIGNED})`] as const) : []),
+            ["UNASSIGNED", `Nepriskirti (${counts.UNASSIGNED})`],
           ] as const
         ).map(([key, label]) => (
           <button
