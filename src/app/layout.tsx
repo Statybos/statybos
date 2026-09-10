@@ -17,6 +17,11 @@ export const metadata: Metadata = {
   title: "Statybos Personalas — darbas statybose užsienyje",
   description:
     "Tvarios komandiruotės Olandijoje, Vokietijoje ir Švedijoje. Legalus įdarbinimas, būstas, rotacijos ir geras atlyginimas.",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
