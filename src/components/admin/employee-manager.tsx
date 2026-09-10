@@ -49,7 +49,7 @@ type EmployeeRow = {
   deployments: DeploymentRow[];
 };
 
-type ViewFilter = "ALL" | "ON_LEAVE" | "INACTIVE" | "ACTIVE";
+type ViewFilter = "ALL" | "ACTIVE" | "UNASSIGNED" | "TRIP" | "ON_LEAVE" | "INACTIVE";
 
 const empty = {
   id: "",
@@ -133,6 +133,8 @@ export function EmployeeManager({
     return {
       ALL: employees.length,
       ACTIVE: employees.filter((e) => e.status !== "INACTIVE").length,
+      UNASSIGNED: employees.filter((e) => e.status !== "INACTIVE" && !e.assignedObjectId).length,
+      TRIP: employees.filter((e) => e.deployments.some((deployment) => isEmployeeTrip(deployment) && isCurrentDeployment(deployment))).length,
       ON_LEAVE: employees.filter((e) => e.deployments.some(isCurrentLeave)).length,
       INACTIVE: employees.filter((e) => e.status === "INACTIVE").length,
     };
@@ -142,6 +144,8 @@ export function EmployeeManager({
     const query = q.trim().toLowerCase();
     return employees.filter((e) => {
       if (view === "ACTIVE" && e.status === "INACTIVE") return false;
+      if (view === "UNASSIGNED" && (e.status === "INACTIVE" || e.assignedObjectId)) return false;
+      if (view === "TRIP" && !e.deployments.some((deployment) => isEmployeeTrip(deployment) && isCurrentDeployment(deployment))) return false;
       if (view === "ON_LEAVE" && !e.deployments.some(isCurrentLeave)) return false;
       if (view === "INACTIVE" && e.status !== "INACTIVE") return false;
       if (objectId && e.assignedObjectId !== objectId) return false;
@@ -254,10 +258,12 @@ export function EmployeeManager({
       <div className="mb-4 flex flex-wrap gap-2">
         {(
           [
-            ["ACTIVE", `Aktyvūs (${counts.ACTIVE})`],
             ["ALL", `Visi (${counts.ALL})`],
+            ["ACTIVE", `Aktyvūs (${counts.ACTIVE})`],
+            ["UNASSIGNED", `Nepriskirti (${counts.UNASSIGNED})`],
+            ["TRIP", `Komandiruotėje (${counts.TRIP})`],
             ["ON_LEAVE", `Atostogose (${counts.ON_LEAVE})`],
-            ["INACTIVE", `Atleisti (${counts.INACTIVE})`],
+            ["INACTIVE", `Neaktyvūs (${counts.INACTIVE})`],
           ] as const
         ).map(([key, label]) => (
           <button
@@ -549,7 +555,7 @@ export function EmployeeManager({
                             <p className="font-medium text-navy">
                               {deployment.object
                                 ? `${deployment.object.country} – ${deployment.object.title}`
-                                : "Rankinė komandiruotė"}
+                                : "Komandiruotė"}
                             </p>
                             <p className="text-muted">
                               {format(new Date(deployment.startDate), "yyyy-MM-dd")} – {deployment.endDate ? format(new Date(deployment.endDate), "yyyy-MM-dd") : "vyksta"}
