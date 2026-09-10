@@ -99,15 +99,6 @@ function isEmployeeTrip(deployment: DeploymentRow) {
   return deployment.type === "PERSONAL_TRIP" || (deployment.type === "WORK" && !deployment.object);
 }
 
-function currentDeploymentForObject(employee: EmployeeRow, objectId: string) {
-  return employee.deployments.find(
-    (deployment) =>
-      isCurrentDeployment(deployment) &&
-      deployment.type === "WORK" &&
-      deployment.objectId === objectId,
-  );
-}
-
 function currentDeploymentForEmployee(employee: EmployeeRow) {
   return employee.deployments.find(
     (deployment) =>
@@ -375,9 +366,7 @@ export function EmployeeManager({
         {rows.map((e) => {
           const history = parseHistory(e.wageHistory);
           const lastChange = history[0];
-          const activeDeployment = objectId
-            ? currentDeploymentForObject(e, objectId)
-            : currentDeploymentForEmployee(e);
+          const activeDeployment = currentDeploymentForEmployee(e);
           const editingWage = wageEditId === e.id;
           return (
             <article
