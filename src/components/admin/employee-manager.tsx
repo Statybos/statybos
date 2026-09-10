@@ -49,7 +49,7 @@ type EmployeeRow = {
   deployments: DeploymentRow[];
 };
 
-type ViewFilter = "ALL" | "ACTIVE" | "UNASSIGNED" | "TRIP" | "ON_LEAVE" | "INACTIVE";
+type ViewFilter = "ALL" | "UNASSIGNED" | "TRIP" | "ON_LEAVE" | "INACTIVE";
 
 const empty = {
   id: "",
@@ -116,7 +116,7 @@ export function EmployeeManager({
   objects: ObjectOpt[];
 }) {
   const [q, setQ] = useState("");
-  const [view, setView] = useState<ViewFilter>("ACTIVE");
+  const [view, setView] = useState<ViewFilter>("ALL");
   const [objectId, setObjectId] = useState("");
   const [form, setForm] = useState(empty);
   const [open, setOpen] = useState(false);
@@ -132,7 +132,6 @@ export function EmployeeManager({
   const counts = useMemo(() => {
     return {
       ALL: employees.length,
-      ACTIVE: employees.filter((e) => e.status !== "INACTIVE").length,
       UNASSIGNED: employees.filter((e) => e.status !== "INACTIVE" && !e.assignedObjectId).length,
       TRIP: employees.filter((e) => e.deployments.some((deployment) => isEmployeeTrip(deployment) && isCurrentDeployment(deployment))).length,
       ON_LEAVE: employees.filter((e) => e.deployments.some(isCurrentLeave)).length,
@@ -143,7 +142,6 @@ export function EmployeeManager({
   const rows = useMemo(() => {
     const query = q.trim().toLowerCase();
     return employees.filter((e) => {
-      if (view === "ACTIVE" && e.status === "INACTIVE") return false;
       if (view === "UNASSIGNED" && (e.status === "INACTIVE" || e.assignedObjectId)) return false;
       if (view === "TRIP" && !e.deployments.some((deployment) => isEmployeeTrip(deployment) && isCurrentDeployment(deployment))) return false;
       if (view === "ON_LEAVE" && !e.deployments.some(isCurrentLeave)) return false;
@@ -259,7 +257,6 @@ export function EmployeeManager({
         {(
           [
             ["ALL", `Visi (${counts.ALL})`],
-            ["ACTIVE", `Aktyvūs (${counts.ACTIVE})`],
             ["UNASSIGNED", `Nepriskirti (${counts.UNASSIGNED})`],
             ["TRIP", `Komandiruotėje (${counts.TRIP})`],
             ["ON_LEAVE", `Atostogose (${counts.ON_LEAVE})`],
