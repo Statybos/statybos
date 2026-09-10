@@ -324,9 +324,9 @@ export function EmployeeManager({
         {(
           [
             ["ALL", `Visi (${counts.ALL})`],
-            ...(!objectId ? (["UNASSIGNED", `Nepriskirti (${counts.UNASSIGNED})`] as const) : []),
             ["TRIP", `Komandiruotėje (${counts.TRIP})`],
-            ["ON_LEAVE", `Atostogose (${counts.ON_LEAVE})`],
+            ["ON_LEAVE", `Atostogos (${counts.ON_LEAVE})`],
+            ["UNASSIGNED", `Nepriskirti (${counts.UNASSIGNED})`],
           ] as const
         ).map(([key, label]) => (
           <button
