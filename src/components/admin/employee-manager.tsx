@@ -115,7 +115,7 @@ export function EmployeeManager({
   objects: ObjectOpt[];
 }) {
   const [q, setQ] = useState("");
-  const [view, setView] = useState<ViewFilter>("ALL");
+  const [view, setView] = useState<ViewFilter>("TRIP");
   const [objectId, setObjectId] = useState("");
   const [form, setForm] = useState(empty);
   const [open, setOpen] = useState(false);
@@ -307,7 +307,7 @@ export function EmployeeManager({
           value={objectId}
           onChange={(e) => {
             setObjectId(e.target.value);
-            setView("ALL");
+            setView("TRIP");
           }}
           className="rounded-full border bg-white px-3 py-1.5 text-sm"
         >
