@@ -50,7 +50,7 @@ type EmployeeRow = {
   deployments: DeploymentRow[];
 };
 
-type ViewFilter = "ALL" | "UNASSIGNED" | "TRIP" | "ON_LEAVE";
+type ViewFilter = "ALL" | "TRIP" | "ON_LEAVE";
 
 const empty = {
   id: "",
@@ -178,11 +178,6 @@ export function EmployeeManager({
       : employees;
     return {
       ALL: scopedEmployees.length,
-      UNASSIGNED: scopedEmployees.filter((employee) =>
-        objectId
-          ? !hasCurrentObjectDeployment(employee, objectId)
-          : employee.status !== "INACTIVE" && !employee.assignedObjectId,
-      ).length,
       TRIP: scopedEmployees.filter((employee) =>
         objectId
           ? hasCurrentObjectTrip(employee, objectId)
@@ -205,14 +200,6 @@ export function EmployeeManager({
         objectId &&
         e.assignedObjectId !== objectId &&
         !hasCurrentObjectDeployment(e, objectId)
-      ) {
-        return false;
-      }
-      if (
-        view === "UNASSIGNED" &&
-        (objectId
-          ? hasCurrentObjectDeployment(e, objectId)
-          : e.status === "INACTIVE" || e.assignedObjectId)
       ) {
         return false;
       }
@@ -342,7 +329,6 @@ export function EmployeeManager({
         {(
           [
             ["ALL", `Visi (${counts.ALL})`],
-            ...(!objectId ? (["UNASSIGNED", `Nepriskirti (${counts.UNASSIGNED})`] as const) : []),
             ["TRIP", `Komandiruotėje (${counts.TRIP})`],
             ["ON_LEAVE", `Atostogose (${counts.ON_LEAVE})`],
           ] as const
