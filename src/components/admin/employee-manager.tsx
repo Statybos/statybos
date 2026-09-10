@@ -169,9 +169,7 @@ export function EmployeeManager({
       : employees;
     return {
       ALL: scopedEmployees.length,
-      UNASSIGNED: scopedEmployees.filter((employee) =>
-        employee.status !== "INACTIVE" && !employee.assignedObjectId,
-      ).length,
+      UNASSIGNED: scopedEmployees.filter((employee) => !employee.assignedObjectId).length,
       TRIP: scopedEmployees.filter((employee) =>
         objectId
           ? hasCurrentObjectTrip(employee, objectId)
@@ -197,10 +195,7 @@ export function EmployeeManager({
       ) {
         return false;
       }
-      if (
-        view === "UNASSIGNED" &&
-        (e.status === "INACTIVE" || e.assignedObjectId)
-      ) {
+      if (view === "UNASSIGNED" && e.assignedObjectId) {
         return false;
       }
       if (
