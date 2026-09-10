@@ -171,7 +171,7 @@ export function EmployeeManager({
       }
       if (
         view === "ON_LEAVE" &&
-        !e.deployments.some(
+        e.deployments.some(
           (deployment) => isEmployeeTrip(deployment) && isCurrentDeployment(deployment),
         )
       ) {
