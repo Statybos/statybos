@@ -360,14 +360,6 @@ export function EmployeeManager({
                 <dd className="font-medium text-navy">{selectedEmployee.addressLt || "Nenurodytas"}</dd>
               </div>
               <div>
-                <dt className="text-muted">Specialybė</dt>
-                <dd className="font-medium text-navy">{selectedEmployee.specialty}</dd>
-              </div>
-              <div>
-                <dt className="text-muted">Statusas</dt>
-                <dd className="font-medium text-navy">{selectedEmployee.status}</dd>
-              </div>
-              <div>
                 <dt className="text-muted">Valandinis</dt>
                 <dd className="font-medium text-navy">
                   {selectedEmployee.hourlyRate > 0

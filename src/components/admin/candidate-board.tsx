@@ -27,6 +27,7 @@ type CandidateRow = {
   notes: string;
   createdAt: string;
   availableFrom: string | null;
+  jobTitle: string | null;
   job: { title: string } | null;
 };
 
@@ -57,6 +58,15 @@ export function CandidateBoard({ candidates }: { candidates: CandidateRow[] }) {
 
   const selected = candidates.find((c) => c.id === openId) ?? null;
 
+  function jobDisplay(candidate: CandidateRow) {
+    const title = candidate.job?.title ?? candidate.jobTitle;
+    if (!title) return null;
+    return {
+      title,
+      deleted: !candidate.job,
+    };
+  }
+
   return (
     <div className="p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -85,7 +95,17 @@ export function CandidateBoard({ candidates }: { candidates: CandidateRow[] }) {
         <table className="min-w-full text-left text-sm">
           <thead className="bg-navy text-white">
             <tr>
-              {["Data", "Vardas Pavardė", "Tel. Nr.", "Miestas", "Kalbos", "Vair. paž.", "Statusas", "Veiksmai"].map(
+              {[
+                "Data",
+                "Vardas Pavardė",
+                "Tel. Nr.",
+                "Miestas",
+                "Skelbimas",
+                "Kalbos",
+                "Vair. paž.",
+                "Statusas",
+                "Veiksmai",
+              ].map(
                 (h) => (
                   <th key={h} className="px-3 py-2 font-medium">
                     {h}
@@ -103,6 +123,18 @@ export function CandidateBoard({ candidates }: { candidates: CandidateRow[] }) {
                 <td className="px-3 py-2 font-medium">{c.fullName}</td>
                   <td className="px-3 py-2">{c.phone}</td>
                 <td className="px-3 py-2">{c.cityLt}</td>
+                <td className="px-3 py-2">
+                  {jobDisplay(c) ? (
+                    <span>
+                      {jobDisplay(c)?.title}
+                      {jobDisplay(c)?.deleted ? (
+                        <span className="block text-xs text-muted">Nebėra skelbimo</span>
+                      ) : null}
+                    </span>
+                  ) : (
+                    "Bendras kandidatas"
+                  )}
+                </td>
                 <td className="px-3 py-2">{parseJsonArray(c.languages).join(", ")}</td>
                 <td className="px-3 py-2">{c.driverLicense}</td>
                 <td className="px-3 py-2">{candidateStatusLabel(c.status)}</td>
@@ -115,7 +147,7 @@ export function CandidateBoard({ candidates }: { candidates: CandidateRow[] }) {
             ))}
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-muted">
+                <td colSpan={9} className="px-3 py-8 text-center text-muted">
                   Kandidatų nėra
                 </td>
               </tr>
@@ -130,7 +162,16 @@ export function CandidateBoard({ candidates }: { candidates: CandidateRow[] }) {
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-xl font-bold">{selected.fullName}</h2>
-                <p className="text-sm text-muted">{selected.job?.title ?? "Bendras kandidatas"}</p>
+                {jobDisplay(selected) ? (
+                  <>
+                    <p className="text-sm text-muted">{jobDisplay(selected)?.title}</p>
+                    {jobDisplay(selected)?.deleted ? (
+                      <p className="text-xs text-muted">Nebėra skelbimo</p>
+                    ) : null}
+                  </>
+                ) : (
+                  <p className="text-sm text-muted">Bendras kandidatas</p>
+                )}
               </div>
               <button onClick={() => setOpenId(null)} className="text-sm text-muted">
                 Uždaryti

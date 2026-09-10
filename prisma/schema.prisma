@@ -26,6 +26,7 @@ model Candidate {
   id            String     @id @default(cuid())
   jobId         String?
   job           JobPosting? @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  jobTitle      String?
   fullName      String
   phone         String
   cityLt        String

@@ -32,9 +32,22 @@ export async function upsertJob(formData: FormData) {
 }
 
 export async function deleteJob(id: string) {
-  await prisma.jobPosting.delete({ where: { id } });
+  const job = await prisma.jobPosting.findUnique({
+    where: { id },
+    select: { title: true },
+  });
+  if (!job) throw new Error("Skelbimas nerastas");
+
+  await prisma.$transaction([
+    prisma.candidate.updateMany({
+      where: { jobId: id },
+      data: { jobTitle: job.title, jobId: null },
+    }),
+    prisma.jobPosting.delete({ where: { id } }),
+  ]);
   revalidatePath("/");
   revalidatePath("/admin/skelbimai");
+  revalidatePath("/admin/kandidatai");
 }
 
 export async function toggleJobActive(id: string, isActive: boolean) {
