@@ -12,6 +12,7 @@ export default async function CandidatesPage() {
 
   const serialized = candidates.map((c) => ({
     ...c,
+    jobTitle: c.jobTitle,
     createdAt: c.createdAt.toISOString(),
     availableFrom: c.availableFrom?.toISOString() ?? null,
   }));
