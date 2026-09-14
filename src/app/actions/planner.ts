@@ -270,11 +270,15 @@ export async function updateDeploymentDates(id: string, startValue: string, endV
       endDate: { gte: startDate },
     },
   });
-  if (overlap) return { error: "Konfliktas: šiomis datomis darbuotojas jau priskirtas." };
 
-  await prisma.deployment.update({
-    where: { id },
-    data: { startDate, endDate },
+  await prisma.$transaction(async (tx) => {
+    if (overlap) {
+      await tx.deployment.delete({ where: { id: overlap.id } });
+    }
+    await tx.deployment.update({
+      where: { id },
+      data: { startDate, endDate },
+    });
   });
   revalidatePath("/admin/planuoklis");
   revalidatePath("/admin/darbuotojai");
