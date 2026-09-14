@@ -128,9 +128,17 @@ export async function createDeployment(formData: FormData) {
       },
     });
     if (overlapWork) {
-      return {
-        error: "Konfliktas: darbuotojas jau priskirtas kitam / tam pačiam objektui šiomis datomis.",
-      };
+      await prisma.deployment.update({
+        where: { id: overlapWork.id },
+        data: { objectId, isActive: true, closedAt: null },
+      });
+      await prisma.employee.update({
+        where: { id: employeeId },
+        data: { assignedObjectId: objectId, status: "ON_SITE" },
+      });
+      revalidatePath("/admin/planuoklis");
+      revalidatePath("/admin/darbuotojai");
+      return { ok: true as const };
     }
   } else {
     const overlapSame = await prisma.deployment.findFirst({

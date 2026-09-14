@@ -50,6 +50,46 @@ export async function upsertEmployee(formData: FormData) {
     const existing = await prisma.employee.findUnique({ where: { id } });
     if (!existing) return { error: "Darbuotojas nerastas" };
 
+    if (existing.assignedObjectId !== data.assignedObjectId) {
+      const now = new Date();
+      const currentWorkDeployment = await prisma.deployment.findFirst({
+        where: {
+          employeeId: id,
+          type: "WORK",
+          isActive: true,
+          startDate: { lte: now },
+          OR: [{ endDate: null }, { endDate: { gte: now } }],
+        },
+        orderBy: { startDate: "desc" },
+      });
+
+      if (data.assignedObjectId) {
+        if (currentWorkDeployment) {
+          await prisma.deployment.update({
+            where: { id: currentWorkDeployment.id },
+            data: { objectId: data.assignedObjectId },
+          });
+        } else {
+          await prisma.deployment.create({
+            data: {
+              employeeId: id,
+              objectId: data.assignedObjectId,
+              startDate: now,
+              endDate: null,
+              type: "WORK",
+              isActive: true,
+              notes: "Priskyrimas objektui",
+            },
+          });
+        }
+      } else if (currentWorkDeployment) {
+        await prisma.deployment.update({
+          where: { id: currentWorkDeployment.id },
+          data: { endDate: now, isActive: false, closedAt: now },
+        });
+      }
+    }
+
     let wageHistory = parseWageHistory(existing.wageHistory);
     if (Math.abs((existing.hourlyRate ?? 0) - data.hourlyRate) > 0.0001) {
       wageHistory = [
