@@ -48,6 +48,44 @@ export async function updateEmployeeObject(employeeId: string, objectId: string 
     if (!object) return { error: "Objektas nerastas" };
   }
 
+  const now = new Date();
+  const currentWorkDeployment = await prisma.deployment.findFirst({
+    where: {
+      employeeId,
+      type: "WORK",
+      isActive: true,
+      startDate: { lte: now },
+      OR: [{ endDate: null }, { endDate: { gte: now } }],
+    },
+    orderBy: { startDate: "desc" },
+  });
+
+  if (objectId) {
+    if (currentWorkDeployment) {
+      await prisma.deployment.update({
+        where: { id: currentWorkDeployment.id },
+        data: { objectId },
+      });
+    } else {
+      await prisma.deployment.create({
+        data: {
+          employeeId,
+          objectId,
+          startDate: now,
+          endDate: null,
+          type: "WORK",
+          isActive: true,
+          notes: "Priskyrimas objektui",
+        },
+      });
+    }
+  } else if (currentWorkDeployment) {
+    await prisma.deployment.update({
+      where: { id: currentWorkDeployment.id },
+      data: { endDate: now, isActive: false, closedAt: now },
+    });
+  }
+
   await prisma.employee.update({
     where: { id: employeeId },
     data: {
