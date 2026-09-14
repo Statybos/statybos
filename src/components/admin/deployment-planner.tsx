@@ -622,7 +622,6 @@ export function DeploymentPlanner({
                                 <p className="truncate text-sm font-bold text-navy">
                                   {e.firstName} {e.lastName}
                                 </p>
-                                <p className="truncate text-xs text-muted">{e.specialty}</p>
                                 {e.phone ? (
                                   <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted">
                                     <Phone className="h-3 w-3" />
