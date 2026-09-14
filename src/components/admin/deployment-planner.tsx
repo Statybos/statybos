@@ -140,6 +140,7 @@ export function DeploymentPlanner({
   const [editEnd, setEditEnd] = useState("");
 
   const selected = activeObjects.find((o) => o.id === selectedObjectId) ?? null;
+  const today = startOfDay(new Date());
 
   const calendarDays = useMemo(() => {
     const start = startOfWeek(startOfMonth(month), { weekStartsOn: 1 });
@@ -178,7 +179,13 @@ export function DeploymentPlanner({
     if (!selected) return [] as EmployeeRow[];
     const ids = new Set<string>();
     for (const d of deployments) {
-      if (d.type === "WORK" && d.objectId === selected.id) ids.add(d.employeeId);
+      if (
+        d.type === "WORK" &&
+        d.objectId === selected.id &&
+        dayInRange(today, d.startDate, d.endDate)
+      ) {
+        ids.add(d.employeeId);
+      }
     }
     for (const e of employees) {
       if (e.assignedObjectId === selected.id && e.status !== "INACTIVE") ids.add(e.id);
@@ -186,9 +193,8 @@ export function DeploymentPlanner({
     return employees
       .filter((e) => ids.has(e.id))
       .sort((a, b) => a.lastName.localeCompare(b.lastName, "lt"));
-  }, [selected, deployments, employees]);
+  }, [selected, deployments, employees, today]);
 
-  const today = startOfDay(new Date());
   const statsDay = selectedDay ?? today;
 
   const stats = useMemo(() => {
@@ -761,7 +767,9 @@ export function DeploymentPlanner({
                   const work = deployments.find(
                     (d) =>
                       d.employeeId === e.id &&
-                        d.type === "WORK" && d.objectId === selected.id,
+                      d.type === "WORK" &&
+                      d.objectId === selected.id &&
+                      dayInRange(today, d.startDate, d.endDate),
                   );
                   const leave = deployments.find(
                     (d) =>
