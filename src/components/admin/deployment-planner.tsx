@@ -22,6 +22,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
+  Phone,
   Sun,
   Users,
 } from "lucide-react";
@@ -606,12 +607,33 @@ export function DeploymentPlanner({
                     {dayDetail.working.length === 0 ? (
                       <p className="text-sm text-muted">Niekas nedirba.</p>
                     ) : (
-                      <ul className="max-h-40 space-y-1 overflow-y-auto">
+                      <ul className="grid max-h-64 gap-2 overflow-y-auto sm:grid-cols-2">
                         {dayDetail.working.map((e) => (
-                          <li key={e.id} className="rounded-lg bg-emerald-50 px-2.5 py-1.5 text-sm">
-                            <span className="font-medium">
-                              {e.firstName} {e.lastName}
-                            </span>
+                          <li
+                            key={e.id}
+                            className="rounded-xl border border-emerald-200 bg-white p-2.5 shadow-sm"
+                          >
+                            <div className="flex items-start gap-2">
+                              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-emerald-500 text-xs font-bold text-white">
+                                {e.firstName[0]}
+                                {e.lastName[0]}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-bold text-navy">
+                                  {e.firstName} {e.lastName}
+                                </p>
+                                <p className="truncate text-xs text-muted">{e.specialty}</p>
+                                {e.phone ? (
+                                  <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted">
+                                    <Phone className="h-3 w-3" />
+                                    {e.phone}
+                                  </p>
+                                ) : null}
+                              </div>
+                              <span className="ml-auto shrink-0 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
+                                Dabar
+                              </span>
+                            </div>
                           </li>
                         ))}
                       </ul>
