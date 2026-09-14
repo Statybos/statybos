@@ -53,6 +53,10 @@ type EmployeeRow = {
   specialty: string;
   status: string;
   phone: string;
+  email: string;
+  personalCode: string;
+  addressLt: string;
+  hourlyRate: number;
   assignedObjectId: string | null;
 };
 
@@ -139,6 +143,7 @@ export function DeploymentPlanner({
   const [editingWorkId, setEditingWorkId] = useState<string | null>(null);
   const [editStart, setEditStart] = useState("");
   const [editEnd, setEditEnd] = useState("");
+  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeRow | null>(null);
 
   const selected = activeObjects.find((o) => o.id === selectedObjectId) ?? null;
   const today = startOfDay(new Date());
@@ -619,9 +624,13 @@ export function DeploymentPlanner({
                                 {e.lastName[0]}
                               </span>
                               <div className="min-w-0">
-                                <p className="truncate text-sm font-bold text-navy">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedEmployee(e)}
+                                  className="truncate text-left text-sm font-bold text-navy underline-offset-2 hover:underline"
+                                >
                                   {e.firstName} {e.lastName}
-                                </p>
+                                </button>
                                 {e.phone ? (
                                   <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted">
                                     <Phone className="h-3 w-3" />
@@ -635,6 +644,69 @@ export function DeploymentPlanner({
                             </div>
                           </li>
                         ))}
+
+                        {selectedEmployee ? (
+                          <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
+                            <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+                              <div className="flex items-start justify-between gap-4">
+                                <div>
+                                  <p className="text-sm text-muted">Darbuotojo informacija</p>
+                                  <h2 className="text-xl font-bold text-navy">
+                                    {selectedEmployee.firstName} {selectedEmployee.lastName}
+                                  </h2>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedEmployee(null)}
+                                  className="rounded-lg border px-3 py-1.5 text-sm"
+                                >
+                                  Uždaryti
+                                </button>
+                              </div>
+
+                              <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
+                                <div>
+                                  <dt className="text-muted">Telefonas</dt>
+                                  <dd className="font-medium text-navy">{selectedEmployee.phone || "Nenurodytas"}</dd>
+                                </div>
+                                <div>
+                                  <dt className="text-muted">El. paštas</dt>
+                                  <dd className="break-words font-medium text-navy">
+                                    {selectedEmployee.email || "Nenurodytas"}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt className="text-muted">Asmens kodas</dt>
+                                  <dd className="font-medium text-navy">
+                                    {selectedEmployee.personalCode || "Nenurodytas"}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt className="text-muted">Gyvenamasis adresas</dt>
+                                  <dd className="font-medium text-navy">
+                                    {selectedEmployee.addressLt || "Nenurodytas"}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt className="text-muted">Valandinis</dt>
+                                  <dd className="font-medium text-navy">
+                                    {selectedEmployee.hourlyRate > 0
+                                      ? `${selectedEmployee.hourlyRate.toFixed(2)} €/val.`
+                                      : "Nenustatyta"}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt className="text-muted">Objektas</dt>
+                                  <dd className="font-medium text-navy">
+                                    {activeObjects.find((object) => object.id === selectedEmployee.assignedObjectId)
+                                      ? `${activeObjects.find((object) => object.id === selectedEmployee.assignedObjectId)?.country} – ${activeObjects.find((object) => object.id === selectedEmployee.assignedObjectId)?.title}`
+                                      : "Objektas nepriskirtas"}
+                                  </dd>
+                                </div>
+                              </dl>
+                            </div>
+                          </div>
+                        ) : null}
                       </ul>
                     )}
                   </div>
