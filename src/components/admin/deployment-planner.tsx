@@ -140,7 +140,7 @@ export function DeploymentPlanner({
   const [rangeStart, setRangeStart] = useState(toInputDate(new Date()));
   const [rangeEnd, setRangeEnd] = useState(toInputDate(addDays(new Date(), 14)));
   const [notes, setNotes] = useState("");
-  const [editingWorkId, setEditingWorkId] = useState<string | null>(null);
+  const [editingDeploymentId, setEditingDeploymentId] = useState<string | null>(null);
   const [editStart, setEditStart] = useState("");
   const [editEnd, setEditEnd] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeRow | null>(null);
@@ -902,13 +902,68 @@ export function DeploymentPlanner({
                           </select>
                         </label>
                         {leave ? (
-                          <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 text-xs text-sky-800">
-                            <Sun className="h-3 w-3" />
-                            Atostogose {format(new Date(leave.startDate), "yyyy-MM-dd")} –{" "}
-                            {leave.endDate ? format(new Date(leave.endDate), "yyyy-MM-dd") : "vyksta"}
-                          </p>
+                          editingDeploymentId === leave.id ? (
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <input
+                                type="date"
+                                value={editStart}
+                                onChange={(event) => setEditStart(event.target.value)}
+                                className="rounded-lg border px-2 py-1 text-xs"
+                              />
+                              <input
+                                type="date"
+                                value={editEnd}
+                                onChange={(event) => setEditEnd(event.target.value)}
+                                className="rounded-lg border px-2 py-1 text-xs"
+                              />
+                              <button
+                                type="button"
+                                disabled={pending}
+                                onClick={() =>
+                                  start(async () => {
+                                    const result = await updateDeploymentDates(leave.id, editStart, editEnd);
+                                    if (result?.error) {
+                                      toast.error(result.error);
+                                      return;
+                                    }
+                                    setEditingDeploymentId(null);
+                                    toast.success("Atostogų datos atnaujintos");
+                                  })
+                                }
+                                className="rounded-lg bg-navy px-2 py-1 text-xs text-white disabled:opacity-50"
+                              >
+                                Išsaugoti
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingDeploymentId(null)}
+                                className="rounded-lg border px-2 py-1 text-xs"
+                              >
+                                Atšaukti
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="mt-1 flex flex-wrap items-center gap-2">
+                              <p className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 text-xs text-sky-800">
+                                <Sun className="h-3 w-3" />
+                                Atostogose {format(new Date(leave.startDate), "yyyy-MM-dd")} –{" "}
+                                {leave.endDate ? format(new Date(leave.endDate), "yyyy-MM-dd") : "vyksta"}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingDeploymentId(leave.id);
+                                  setEditStart(toInputDate(new Date(leave.startDate)));
+                                  setEditEnd(leave.endDate ? toInputDate(new Date(leave.endDate)) : toInputDate(today));
+                                }}
+                                className="rounded-lg border px-2 py-1 text-xs"
+                              >
+                                Keisti datas
+                              </button>
+                            </div>
+                          )
                         ) : work ? (
-                          editingWorkId === work.id ? (
+                          editingDeploymentId === work.id ? (
                             <div className="mt-2 flex flex-wrap items-center gap-2">
                               <input
                                 type="date"
@@ -932,7 +987,7 @@ export function DeploymentPlanner({
                                       toast.error(result.error);
                                       return;
                                     }
-                                    setEditingWorkId(null);
+                                    setEditingDeploymentId(null);
                                     toast.success("Objekto datos atnaujintos");
                                   })
                                 }
@@ -942,7 +997,7 @@ export function DeploymentPlanner({
                               </button>
                               <button
                                 type="button"
-                                onClick={() => setEditingWorkId(null)}
+                                onClick={() => setEditingDeploymentId(null)}
                                 className="rounded-lg border px-2 py-1 text-xs"
                               >
                                 Atšaukti
@@ -957,7 +1012,7 @@ export function DeploymentPlanner({
                               <button
                                 type="button"
                                 onClick={() => {
-                                  setEditingWorkId(work.id);
+                                  setEditingDeploymentId(work.id);
                                   setEditStart(toInputDate(new Date(work.startDate)));
                                   setEditEnd(work.endDate ? toInputDate(new Date(work.endDate)) : toInputDate(today));
                                 }}
