@@ -140,6 +140,57 @@ export async function createDeployment(formData: FormData) {
       revalidatePath("/admin/darbuotojai");
       return { ok: true as const };
     }
+  } else if (type === "VACATION_LT") {
+    const day = 24 * 60 * 60 * 1000;
+    const overlappingDeployments = await prisma.deployment.findMany({
+      where: {
+        employeeId,
+        startDate: { lte: endDate },
+        OR: [{ endDate: null }, { endDate: { gte: startDate } }],
+      },
+    });
+
+    await prisma.$transaction(async (tx) => {
+      for (const deployment of overlappingDeployments) {
+        const hasBeforePart = deployment.startDate < startDate;
+        const hasAfterPart = deployment.endDate == null || deployment.endDate > endDate;
+
+        if (hasBeforePart) {
+          await tx.deployment.update({
+            where: { id: deployment.id },
+            data: { endDate: new Date(startDate.getTime() - day) },
+          });
+        } else {
+          await tx.deployment.delete({ where: { id: deployment.id } });
+        }
+
+        if (hasAfterPart && deployment.endDate) {
+          await tx.deployment.create({
+            data: {
+              employeeId,
+              objectId: deployment.objectId,
+              startDate: new Date(endDate.getTime() + day),
+              endDate: deployment.endDate,
+              closedAt: deployment.closedAt,
+              isActive: deployment.isActive,
+              type: deployment.type,
+              notes: deployment.notes,
+            },
+          });
+        }
+      }
+
+      await tx.deployment.create({
+        data: {
+          employeeId,
+          objectId,
+          type,
+          startDate,
+          endDate,
+          notes,
+        },
+      });
+    });
   } else {
     const overlapSame = await prisma.deployment.findFirst({
       where: {
@@ -154,16 +205,18 @@ export async function createDeployment(formData: FormData) {
     }
   }
 
-  await prisma.deployment.create({
-    data: {
-      employeeId,
-      objectId: type === "WORK" ? objectId : objectId,
-      type,
-      startDate,
-      endDate,
-      notes,
-    },
-  });
+  if (type !== "VACATION_LT") {
+    await prisma.deployment.create({
+      data: {
+        employeeId,
+        objectId: type === "WORK" ? objectId : objectId,
+        type,
+        startDate,
+        endDate,
+        notes,
+      },
+    });
+  }
 
   if (type === "WORK" && objectId) {
     await prisma.employee.update({
