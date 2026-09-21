@@ -39,6 +39,31 @@ async function syncEmployeeStatus(employeeId: string) {
   });
 }
 
+async function closePersonalTripsBeforeWork(employeeId: string, workStart: Date, workEnd: Date | null) {
+  const trips = await prisma.deployment.findMany({
+    where: {
+      employeeId,
+      type: "PERSONAL_TRIP",
+      isActive: true,
+      ...dateOverlap(workStart, workEnd ?? new Date("9999-12-31")),
+    },
+  });
+
+  for (const trip of trips) {
+    if (trip.startDate >= workStart) {
+      throw new Error("Asmeninė komandiruotė prasideda po darbo objekte pradžios.");
+    }
+    await prisma.deployment.update({
+      where: { id: trip.id },
+      data: {
+        endDate: new Date(workStart.getTime() - DAY_MS),
+        isActive: false,
+        closedAt: new Date(),
+      },
+    });
+  }
+}
+
 export async function upsertObject(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const requiredRaw = Number(formData.get("requiredHeadcount") ?? 1);
@@ -104,6 +129,14 @@ export async function updateEmployeeObject(employeeId: string, objectId: string 
     },
     select: { id: true },
   });
+
+  if (objectId) {
+    try {
+      await closePersonalTripsBeforeWork(employeeId, now, null);
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : "Konfliktas su asmenine komandiruote." };
+    }
+  }
 
   if (objectId) {
     if (currentWorkDeployment) {
@@ -195,6 +228,11 @@ export async function createDeployment(formData: FormData) {
     });
     if (overlapWork) {
       return { error: "Konfliktas: darbuotojas šiomis datomis jau dirba kitame objekte." };
+    }
+    try {
+      await closePersonalTripsBeforeWork(employeeId, startDate, endDate);
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : "Konfliktas su asmenine komandiruote." };
     }
   } else if (type === "VACATION_LT") {
     const overlappingDeployments = await prisma.deployment.findMany({
@@ -394,7 +432,7 @@ export async function updateDeploymentDates(id: string, startValue: string, endV
       id: { not: id },
       employeeId: deployment.employeeId,
       type: deployment.type === "WORK"
-        ? { in: ["WORK", "PERSONAL_TRIP"] }
+        ? "WORK"
         : deployment.type === "VACATION_LT" || deployment.type === "TRANSIT"
           ? { in: ["VACATION_LT", "TRANSIT", "PERSONAL_TRIP"] }
           : "PERSONAL_TRIP",
@@ -417,6 +455,14 @@ export async function updateDeploymentDates(id: string, startValue: string, endV
     return {
       error: `Konfliktas: datos persidengia su įrašu „${typeLabel}“ nuo ${overlap.startDate.toISOString().slice(0, 10)}${overlap.endDate ? ` iki ${overlap.endDate.toISOString().slice(0, 10)}` : " (be pabaigos)"}.`,
     };
+  }
+
+  if (deployment.type === "WORK") {
+    try {
+      await closePersonalTripsBeforeWork(deployment.employeeId, startDate, endDate);
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : "Konfliktas su asmenine komandiruote." };
+    }
   }
 
   await prisma.deployment.update({
