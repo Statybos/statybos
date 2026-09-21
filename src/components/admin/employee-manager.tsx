@@ -99,6 +99,10 @@ function isEmployeeTrip(deployment: DeploymentRow) {
   return deployment.type === "PERSONAL_TRIP";
 }
 
+function isEmployeeAway(deployment: DeploymentRow) {
+  return deployment.type === "VACATION_LT" || deployment.type === "TRANSIT";
+}
+
 function currentDeploymentForEmployee(employee: EmployeeRow) {
   return employee.deployments.find(
     (deployment) =>
@@ -141,8 +145,8 @@ export function EmployeeManager({
         ),
       ).length,
       ON_LEAVE: scopedEmployees.filter((employee) =>
-        !employee.deployments.some(
-          (deployment) => isEmployeeTrip(deployment) && isCurrentDeployment(deployment),
+        employee.deployments.some(
+          (deployment) => isEmployeeAway(deployment) && isCurrentDeployment(deployment),
         ),
       ).length,
     };
@@ -171,8 +175,8 @@ export function EmployeeManager({
       }
       if (
         view === "ON_LEAVE" &&
-        e.deployments.some(
-          (deployment) => isEmployeeTrip(deployment) && isCurrentDeployment(deployment),
+        !e.deployments.some(
+          (deployment) => isEmployeeAway(deployment) && isCurrentDeployment(deployment),
         )
       ) {
         return false;

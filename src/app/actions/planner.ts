@@ -3,6 +3,42 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function dateOverlap(startDate: Date, endDate: Date) {
+  return {
+    startDate: { lte: endDate },
+    OR: [{ endDate: null }, { endDate: { gte: startDate } }],
+  };
+}
+
+async function syncEmployeeStatus(employeeId: string) {
+  const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
+  if (!employee || employee.status === "INACTIVE") return;
+
+  const now = new Date();
+  const [work, away] = await Promise.all([
+    prisma.deployment.findFirst({
+      where: { employeeId, type: "WORK", isActive: true, ...dateOverlap(now, now) },
+      select: { id: true },
+    }),
+    prisma.deployment.findFirst({
+      where: {
+        employeeId,
+        type: { in: ["VACATION_LT", "TRANSIT", "PERSONAL_TRIP"] },
+        isActive: true,
+        ...dateOverlap(now, now),
+      },
+      select: { id: true },
+    }),
+  ]);
+
+  await prisma.employee.update({
+    where: { id: employeeId },
+    data: { status: away ? "ON_LEAVE" : work ? "ON_SITE" : "BENCH_LT" },
+  });
+}
+
 export async function upsertObject(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const requiredRaw = Number(formData.get("requiredHeadcount") ?? 1);
@@ -59,6 +95,15 @@ export async function updateEmployeeObject(employeeId: string, objectId: string 
     },
     orderBy: { startDate: "desc" },
   });
+  const currentAwayDeployment = await prisma.deployment.findFirst({
+    where: {
+      employeeId,
+      type: { in: ["VACATION_LT", "TRANSIT"] },
+      isActive: true,
+      ...dateOverlap(now, now),
+    },
+    select: { id: true },
+  });
 
   if (objectId) {
     if (currentWorkDeployment) {
@@ -90,7 +135,9 @@ export async function updateEmployeeObject(employeeId: string, objectId: string 
     where: { id: employeeId },
     data: {
       assignedObjectId: objectId,
-      status: objectId && employee.status !== "INACTIVE" ? "ON_SITE" : "BENCH_LT",
+      status: objectId && employee.status !== "INACTIVE"
+        ? currentAwayDeployment ? "ON_LEAVE" : "ON_SITE"
+        : "BENCH_LT",
     },
   });
   revalidatePath("/admin/planuoklis");
@@ -123,32 +170,25 @@ export async function createDeployment(formData: FormData) {
       where: {
         employeeId,
         type: "WORK",
-        startDate: { lte: endDate },
-        endDate: { gte: startDate },
+        isActive: true,
+        ...dateOverlap(startDate, endDate),
       },
     });
     if (overlapWork) {
-      await prisma.deployment.update({
-        where: { id: overlapWork.id },
-        data: { objectId, isActive: true, closedAt: null },
-      });
-      await prisma.employee.update({
-        where: { id: employeeId },
-        data: { assignedObjectId: objectId, status: "ON_SITE" },
-      });
-      revalidatePath("/admin/planuoklis");
-      revalidatePath("/admin/darbuotojai");
-      return { ok: true as const };
+      return { error: "Konfliktas: darbuotojas šiomis datomis jau dirba kitame objekte." };
     }
   } else if (type === "VACATION_LT") {
-    const day = 24 * 60 * 60 * 1000;
     const overlappingDeployments = await prisma.deployment.findMany({
       where: {
         employeeId,
-        startDate: { lte: endDate },
-        OR: [{ endDate: null }, { endDate: { gte: startDate } }],
+        isActive: true,
+        ...dateOverlap(startDate, endDate),
       },
     });
+
+    if (overlappingDeployments.some((deployment) => deployment.type !== "WORK")) {
+      return { error: "Konfliktas: atostogos persidengia su kita atostogų arba tranzito atkarpa." };
+    }
 
     await prisma.$transaction(async (tx) => {
       for (const deployment of overlappingDeployments) {
@@ -158,18 +198,18 @@ export async function createDeployment(formData: FormData) {
         if (hasBeforePart) {
           await tx.deployment.update({
             where: { id: deployment.id },
-            data: { endDate: new Date(startDate.getTime() - day) },
+            data: { endDate: new Date(startDate.getTime() - DAY_MS) },
           });
         } else {
           await tx.deployment.delete({ where: { id: deployment.id } });
         }
 
-        if (hasAfterPart && deployment.endDate) {
+        if (hasAfterPart) {
           await tx.deployment.create({
             data: {
               employeeId,
               objectId: deployment.objectId,
-              startDate: new Date(endDate.getTime() + day),
+              startDate: new Date(endDate.getTime() + DAY_MS),
               endDate: deployment.endDate,
               closedAt: deployment.closedAt,
               isActive: deployment.isActive,
@@ -195,9 +235,9 @@ export async function createDeployment(formData: FormData) {
     const overlapSame = await prisma.deployment.findFirst({
       where: {
         employeeId,
-        type: { in: ["VACATION_LT", "TRANSIT"] },
-        startDate: { lte: endDate },
-        endDate: { gte: startDate },
+        type: { in: ["VACATION_LT", "TRANSIT", "PERSONAL_TRIP"] },
+        isActive: true,
+        ...dateOverlap(startDate, endDate),
       },
     });
     if (overlapSame) {
@@ -259,11 +299,8 @@ export async function startEmployeeDeployment(formData: FormData) {
     where: {
       employeeId,
       isActive: true,
-      OR: [
-        { type: "PERSONAL_TRIP" },
-        { type: "WORK", objectId: null },
-      ],
-      AND: [{ OR: [{ endDate: null }, { endDate: { gte: new Date() } }] }],
+      type: { in: ["PERSONAL_TRIP", "WORK", "VACATION_LT", "TRANSIT"] },
+      ...dateOverlap(startDate, new Date("9999-12-31")),
     },
   });
   if (activeDeployment) return { error: "Darbuotojas jau yra aktyvioje komandiruotėje" };
@@ -279,6 +316,7 @@ export async function startEmployeeDeployment(formData: FormData) {
       isActive: true,
     },
   });
+  await syncEmployeeStatus(employeeId);
 
   revalidatePath("/admin/darbuotojai");
   revalidatePath("/admin/planuoklis");
@@ -295,6 +333,7 @@ export async function closeEmployeeDeployment(id: string) {
     where: { id },
     data: { isActive: false, closedAt, endDate: closedAt },
   });
+  await syncEmployeeStatus(deployment.employeeId);
 
   revalidatePath("/admin/darbuotojai");
   revalidatePath("/admin/planuoklis");
@@ -318,28 +357,35 @@ export async function updateDeploymentDates(id: string, startValue: string, endV
     where: {
       id: { not: id },
       employeeId: deployment.employeeId,
-      type: deployment.type,
-      startDate: { lte: endDate },
-      endDate: { gte: startDate },
+      type: deployment.type === "WORK"
+        ? { in: ["WORK", "PERSONAL_TRIP"] }
+        : deployment.type === "VACATION_LT" || deployment.type === "TRANSIT"
+          ? { in: ["VACATION_LT", "TRANSIT", "PERSONAL_TRIP"] }
+          : "PERSONAL_TRIP",
+      isActive: true,
+      ...dateOverlap(startDate, endDate),
     },
   });
 
-  await prisma.$transaction(async (tx) => {
-    if (overlap) {
-      await tx.deployment.delete({ where: { id: overlap.id } });
-    }
-    await tx.deployment.update({
-      where: { id },
-      data: { startDate, endDate },
-    });
+  if (overlap) {
+    return { error: "Konfliktas: pasirinktos datos persidengia su kitu darbuotojo statusu." };
+  }
+
+  await prisma.deployment.update({
+    where: { id },
+    data: { startDate, endDate },
   });
+  await syncEmployeeStatus(deployment.employeeId);
   revalidatePath("/admin/planuoklis");
   revalidatePath("/admin/darbuotojai");
   return { ok: true as const };
 }
 
 export async function deleteDeployment(id: string) {
+  const deployment = await prisma.deployment.findUnique({ where: { id } });
+  if (!deployment) return { error: "Priskyrimas nerastas" };
   await prisma.deployment.delete({ where: { id } });
+  await syncEmployeeStatus(deployment.employeeId);
   revalidatePath("/admin/planuoklis");
   revalidatePath("/admin/darbuotojai");
 }
