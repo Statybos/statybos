@@ -287,7 +287,24 @@ export async function createDeployment(formData: FormData) {
       },
     });
     if (overlapWork) {
-      return { error: "Konfliktas: darbuotojas šiomis datomis jau dirba kitame objekte." };
+      if (overlapWork.objectId === objectId) {
+        await prisma.deployment.update({
+          where: { id: overlapWork.id },
+          data: { startDate, endDate, isActive: true, closedAt: null },
+        });
+        await syncEmployeeStatus(employeeId);
+        revalidatePath("/admin/planuoklis");
+        revalidatePath("/admin/darbuotojai");
+        return { ok: true as const };
+      }
+      await prisma.deployment.update({
+        where: { id: overlapWork.id },
+        data: {
+          endDate: new Date(startDate.getTime() - DAY_MS),
+          isActive: false,
+          closedAt: new Date(),
+        },
+      });
     }
     try {
       await closePersonalTripsBeforeWork(employeeId, startDate, endDate);
