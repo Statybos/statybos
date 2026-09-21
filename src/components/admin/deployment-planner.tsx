@@ -913,6 +913,15 @@ export function DeploymentPlanner({
                       (d.type === "VACATION_LT" || d.type === "TRANSIT") &&
                       dayInRange(today, d.startDate, d.endDate),
                   );
+                  const returnWork = leave?.endDate
+                    ? deployments.find(
+                        (d) =>
+                          d.employeeId === e.id &&
+                          d.type === "WORK" &&
+                          d.objectId === selected.id &&
+                          new Date(d.startDate) > new Date(leave.endDate as string),
+                      )
+                    : null;
                   const currentStatus = leave
                     ? leave.type === "TRANSIT" ? "Tranzite" : "Atostogose"
                     : work
@@ -931,6 +940,11 @@ export function DeploymentPlanner({
                         {activePeriod ? (
                           <p className="mt-1 text-xs text-muted">
                             {deploymentDays(activePeriod)} d. / {deploymentWeeks(activePeriod)} sav. nuo {format(new Date(activePeriod.startDate), "yyyy-MM-dd")}
+                          </p>
+                        ) : null}
+                        {returnWork ? (
+                          <p className="mt-1 text-xs font-medium text-emerald-700">
+                            Po atostogų komandiruotėje nuo {format(new Date(returnWork.startDate), "yyyy-MM-dd")} · iki datos nenustatyta
                           </p>
                         ) : null}
                         <label className="mt-1 block text-xs text-muted">

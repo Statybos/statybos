@@ -65,6 +65,42 @@ async function closePersonalTripsBeforeWork(employeeId: string, workStart: Date,
   }
 }
 
+async function ensureWorkAfterVacation(employeeId: string, objectId: string | null, vacationStart: Date, vacationEnd: Date | null) {
+  if (!objectId || !vacationEnd) return;
+
+  const workStart = new Date(vacationEnd.getTime() + DAY_MS);
+  const continuation = await prisma.deployment.findFirst({
+    where: {
+      employeeId,
+      objectId,
+      type: "WORK",
+      isActive: true,
+      startDate: { gte: vacationStart },
+    },
+    orderBy: { startDate: "asc" },
+  });
+
+  if (continuation) {
+    await prisma.deployment.update({
+      where: { id: continuation.id },
+      data: { startDate: workStart, closedAt: null },
+    });
+    return;
+  }
+
+  await prisma.deployment.create({
+    data: {
+      employeeId,
+      objectId,
+      type: "WORK",
+      startDate: workStart,
+      endDate: null,
+      isActive: true,
+      notes: "Grįžimas po atostogų",
+    },
+  });
+}
+
 export async function upsertObject(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const requiredRaw = Number(formData.get("requiredHeadcount") ?? 1);
@@ -289,6 +325,7 @@ export async function createDeployment(formData: FormData) {
         },
       });
     });
+    await ensureWorkAfterVacation(employeeId, objectId, startDate, endDate);
   } else {
     const overlapSame = await prisma.deployment.findFirst({
       where: {
@@ -464,6 +501,9 @@ export async function updateDeploymentDates(id: string, startValue: string, endV
     } catch (error) {
       return { error: error instanceof Error ? error.message : "Konfliktas su asmenine komandiruote." };
     }
+  }
+  if (deployment.type === "VACATION_LT") {
+    await ensureWorkAfterVacation(deployment.employeeId, deployment.objectId, startDate, endDate);
   }
 
   await prisma.deployment.update({
