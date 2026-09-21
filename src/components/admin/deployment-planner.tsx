@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import {
   createDeployment,
+  closeWorkDeployment,
   deleteObject,
   deleteDeployment,
   updateEmployeeObject,
@@ -80,7 +81,7 @@ function toInputDate(d: Date) {
 
 function dayInRange(day: Date, startIso: string, endIso: string | null) {
   const start = startOfDay(new Date(startIso));
-  const end = startOfDay(endIso ? new Date(endIso) : new Date());
+  const end = startOfDay(endIso ? new Date(endIso) : new Date("9999-12-31"));
   return day >= start && day <= end;
 }
 
@@ -139,6 +140,8 @@ export function DeploymentPlanner({
   const [vacationEmployeeId, setVacationEmployeeId] = useState("");
   const [rangeStart, setRangeStart] = useState(toInputDate(new Date()));
   const [rangeEnd, setRangeEnd] = useState(toInputDate(addDays(new Date(), 14)));
+  const [assignHasEnd, setAssignHasEnd] = useState(true);
+  const [vacationHasEnd, setVacationHasEnd] = useState(true);
   const [notes, setNotes] = useState("");
   const [editingDeploymentId, setEditingDeploymentId] = useState<string | null>(null);
   const [editStart, setEditStart] = useState("");
@@ -252,7 +255,7 @@ export function DeploymentPlanner({
       if (leave) {
         onLeave.push({
           employee: emp,
-          until: leave.endDate ?? toInputDate(today),
+          until: leave.endDate ?? "",
           type: leave.type,
         });
       } else {
@@ -273,8 +276,9 @@ export function DeploymentPlanner({
       }
     }
     const replacements = employees.filter((e) => {
-      if (e.status !== "BENCH_LT") return false;
+      if (e.status === "INACTIVE") return false;
       if (busy.has(e.id)) return false;
+      if (isAway(e.id, selectedDay)) return false;
       if (neededSpecialties.size === 0) return true;
       return neededSpecialties.has(e.specialty);
     });
@@ -298,7 +302,7 @@ export function DeploymentPlanner({
     fd.set("objectId", selected.id);
     fd.set("type", "WORK");
     fd.set("startDate", from ?? rangeStart);
-    fd.set("endDate", to ?? rangeEnd);
+    if (assignHasEnd) fd.set("endDate", to ?? rangeEnd);
     fd.set("notes", notes || "Priskyrimas objektui");
     start(async () => {
       const result = await createDeployment(fd);
@@ -321,7 +325,7 @@ export function DeploymentPlanner({
     fd.set("employeeId", vacationEmployeeId);
     fd.set("type", "VACATION_LT");
     fd.set("startDate", rangeStart);
-    fd.set("endDate", rangeEnd);
+    if (vacationHasEnd) fd.set("endDate", rangeEnd);
     fd.set("notes", notes || "Atostogos LT");
     if (selected) fd.set("objectId", selected.id);
     start(async () => {
@@ -727,7 +731,7 @@ export function DeploymentPlanner({
                             <span className="text-muted">
                               {" "}
                               · {type === "TRANSIT" ? "tranzitas" : "atostogos"} iki{" "}
-                              {format(new Date(until), "yyyy-MM-dd")}
+                              {until ? format(new Date(until), "yyyy-MM-dd") : "data nežinoma"}
                             </span>
                           </li>
                         ))}
@@ -769,7 +773,7 @@ export function DeploymentPlanner({
                                         ? toInputDate(selectedDay)
                                         : toInputDate(selectedDay),
                                       leave
-                                        ? toInputDate(new Date(leave.until))
+                                        ? leave.until ? toInputDate(new Date(leave.until)) : undefined
                                         : toInputDate(addDays(selectedDay, 21)),
                                     );
                                   }}
@@ -806,7 +810,15 @@ export function DeploymentPlanner({
                   ))}
                 </select>
                 <input type="date" value={rangeStart} onChange={(e) => setRangeStart(e.target.value)} className="rounded-lg border px-2 py-1.5 text-sm" />
-                <input type="date" value={rangeEnd} onChange={(e) => setRangeEnd(e.target.value)} className="rounded-lg border px-2 py-1.5 text-sm" />
+                {assignHasEnd ? (
+                  <input type="date" value={rangeEnd} onChange={(e) => setRangeEnd(e.target.value)} className="rounded-lg border px-2 py-1.5 text-sm" />
+                ) : (
+                  <div className="rounded-lg border bg-slate-50 px-2 py-1.5 text-sm text-muted">Pabaiga nežinoma</div>
+                )}
+                <label className="flex items-center gap-2 text-xs text-muted sm:col-span-2">
+                  <input type="checkbox" checked={assignHasEnd} onChange={(e) => setAssignHasEnd(e.target.checked)} />
+                  Žinau, iki kada dirbs objekte
+                </label>
                 <button
                   type="button"
                   disabled={pending || !assignEmployeeId}
@@ -834,7 +846,15 @@ export function DeploymentPlanner({
                   ))}
                 </select>
                 <input type="date" value={rangeStart} onChange={(e) => setRangeStart(e.target.value)} className="rounded-lg border px-2 py-1.5 text-sm" />
-                <input type="date" value={rangeEnd} onChange={(e) => setRangeEnd(e.target.value)} className="rounded-lg border px-2 py-1.5 text-sm" />
+                {vacationHasEnd ? (
+                  <input type="date" value={rangeEnd} onChange={(e) => setRangeEnd(e.target.value)} className="rounded-lg border px-2 py-1.5 text-sm" />
+                ) : (
+                  <div className="rounded-lg border bg-slate-50 px-2 py-1.5 text-sm text-muted">Grįžimo data nežinoma</div>
+                )}
+                <label className="flex items-center gap-2 text-xs text-muted sm:col-span-2">
+                  <input type="checkbox" checked={vacationHasEnd} onChange={(e) => setVacationHasEnd(e.target.checked)} />
+                  Žinau, kada grįš iš atostogų
+                </label>
                 <button
                   type="button"
                   disabled={pending || !vacationEmployeeId}
@@ -870,11 +890,19 @@ export function DeploymentPlanner({
                       (d.type === "VACATION_LT" || d.type === "TRANSIT") &&
                       dayInRange(today, d.startDate, d.endDate),
                   );
+                  const currentStatus = leave
+                    ? leave.type === "TRANSIT" ? "Tranzite" : "Atostogose"
+                    : work
+                      ? "Komandiruotėje"
+                      : "Priskirtas, bet nedirba";
                   return (
                     <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                       <div>
                         <p className="font-medium">
                           {e.firstName} {e.lastName}
+                        </p>
+                        <p className={`mt-1 text-xs font-semibold ${leave ? "text-sky-700" : work ? "text-emerald-700" : "text-slate-500"}`}>
+                          {currentStatus}
                         </p>
                         <label className="mt-1 block text-xs text-muted">
                           Priskirtas objektas
@@ -954,7 +982,7 @@ export function DeploymentPlanner({
                                 onClick={() => {
                                   setEditingDeploymentId(leave.id);
                                   setEditStart(toInputDate(new Date(leave.startDate)));
-                                  setEditEnd(leave.endDate ? toInputDate(new Date(leave.endDate)) : toInputDate(today));
+                                  setEditEnd(leave.endDate ? toInputDate(new Date(leave.endDate)) : "");
                                 }}
                                 className="rounded-lg border px-2 py-1 text-xs"
                               >
@@ -1014,11 +1042,27 @@ export function DeploymentPlanner({
                                 onClick={() => {
                                   setEditingDeploymentId(work.id);
                                   setEditStart(toInputDate(new Date(work.startDate)));
-                                  setEditEnd(work.endDate ? toInputDate(new Date(work.endDate)) : toInputDate(today));
+                                  setEditEnd(work.endDate ? toInputDate(new Date(work.endDate)) : "");
                                 }}
                                 className="rounded-lg border px-2 py-1 text-xs"
                               >
                                 Keisti datas
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  start(async () => {
+                                    const result = await closeWorkDeployment(work.id);
+                                    if (result?.error) {
+                                      toast.error(result.error);
+                                      return;
+                                    }
+                                    toast.success("Darbas objekte baigtas");
+                                  })
+                                }
+                                className="rounded-lg border border-emerald-200 px-2 py-1 text-xs text-emerald-700"
+                              >
+                                Baigti darbą
                               </button>
                             </div>
                           )

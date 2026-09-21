@@ -150,13 +150,14 @@ export async function createDeployment(formData: FormData) {
   const objectId = String(formData.get("objectId") ?? "") || null;
   const type = String(formData.get("type") ?? "WORK");
   const startDate = new Date(String(formData.get("startDate") ?? ""));
-  const endDate = new Date(String(formData.get("endDate") ?? ""));
+  const endValue = String(formData.get("endDate") ?? "");
+  const endDate = endValue ? new Date(endValue) : null;
   const notes = String(formData.get("notes") ?? "");
 
-  if (!employeeId || Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-    return { error: "Pasirinkite darbuotoją ir datas" };
+  if (!employeeId || Number.isNaN(startDate.getTime()) || (endDate && Number.isNaN(endDate.getTime()))) {
+    return { error: "Pasirinkite darbuotoją ir pradžios datą" };
   }
-  if (endDate < startDate) {
+  if (endDate && endDate < startDate) {
     return { error: "Pabaigos data negali būti ankstesnė už pradžią" };
   }
   if (type === "WORK" && !objectId) {
@@ -171,7 +172,7 @@ export async function createDeployment(formData: FormData) {
         employeeId,
         type: "WORK",
         isActive: true,
-        ...dateOverlap(startDate, endDate),
+        ...dateOverlap(startDate, endDate ?? new Date("9999-12-31")),
       },
     });
     if (overlapWork) {
@@ -182,7 +183,7 @@ export async function createDeployment(formData: FormData) {
       where: {
         employeeId,
         isActive: true,
-        ...dateOverlap(startDate, endDate),
+        ...dateOverlap(startDate, endDate ?? new Date("9999-12-31")),
       },
     });
 
@@ -193,7 +194,7 @@ export async function createDeployment(formData: FormData) {
     await prisma.$transaction(async (tx) => {
       for (const deployment of overlappingDeployments) {
         const hasBeforePart = deployment.startDate < startDate;
-        const hasAfterPart = deployment.endDate == null || deployment.endDate > endDate;
+        const hasAfterPart = endDate !== null && (deployment.endDate == null || deployment.endDate > endDate);
 
         if (hasBeforePart) {
           await tx.deployment.update({
@@ -237,7 +238,7 @@ export async function createDeployment(formData: FormData) {
         employeeId,
         type: { in: ["VACATION_LT", "TRANSIT", "PERSONAL_TRIP"] },
         isActive: true,
-        ...dateOverlap(startDate, endDate),
+        ...dateOverlap(startDate, endDate ?? new Date("9999-12-31")),
       },
     });
     if (overlapSame) {
@@ -340,13 +341,30 @@ export async function closeEmployeeDeployment(id: string) {
   return { ok: true as const };
 }
 
+export async function closeWorkDeployment(id: string) {
+  const deployment = await prisma.deployment.findUnique({ where: { id } });
+  if (!deployment || deployment.type !== "WORK") return { error: "Darbo priskyrimas nerastas" };
+  if (!deployment.isActive) return { error: "Darbas objekte jau uždarytas" };
+
+  const closedAt = new Date();
+  await prisma.deployment.update({
+    where: { id },
+    data: { isActive: false, closedAt, endDate: closedAt },
+  });
+  await syncEmployeeStatus(deployment.employeeId);
+
+  revalidatePath("/admin/darbuotojai");
+  revalidatePath("/admin/planuoklis");
+  return { ok: true as const };
+}
+
 export async function updateDeploymentDates(id: string, startValue: string, endValue: string) {
   const startDate = new Date(startValue);
-  const endDate = new Date(endValue);
-  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-    return { error: "Pasirinkite abi datas" };
+  const endDate = endValue ? new Date(endValue) : null;
+  if (Number.isNaN(startDate.getTime()) || (endDate && Number.isNaN(endDate.getTime()))) {
+    return { error: "Pasirinkite pradžios datą" };
   }
-  if (endDate < startDate) {
+  if (endDate && endDate < startDate) {
     return { error: "Pabaigos data negali būti ankstesnė už pradžią" };
   }
 
@@ -363,7 +381,7 @@ export async function updateDeploymentDates(id: string, startValue: string, endV
           ? { in: ["VACATION_LT", "TRANSIT", "PERSONAL_TRIP"] }
           : "PERSONAL_TRIP",
       isActive: true,
-      ...dateOverlap(startDate, endDate),
+      ...dateOverlap(startDate, endDate ?? new Date("9999-12-31")),
     },
   });
 
