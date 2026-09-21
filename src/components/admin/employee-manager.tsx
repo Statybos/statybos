@@ -86,10 +86,6 @@ function deploymentDays(deployment: DeploymentRow) {
   return Math.max(1, differenceInCalendarDays(end, start) + 1);
 }
 
-function deploymentWeeks(deployment: DeploymentRow) {
-  return Math.ceil(deploymentDays(deployment) / 7);
-}
-
 function isCurrentDeployment(deployment: DeploymentRow) {
   const now = new Date();
   return (
@@ -361,7 +357,7 @@ export function EmployeeManager({
 
               {activeDeployment ? (
                 <p className="mb-2 text-xs font-medium text-orange-700">
-                  Komandiruotėje {deploymentDays(activeDeployment)} d. / {deploymentWeeks(activeDeployment)} sav. nuo {format(new Date(activeDeployment.startDate), "yyyy-MM-dd")}
+                  Komandiruotėje nuo {format(new Date(activeDeployment.startDate), "yyyy-MM-dd")}
                 </p>
               ) : null}
 
@@ -594,7 +590,7 @@ export function EmployeeManager({
                             </p>
                             <p className="text-muted">
                               {format(new Date(deployment.startDate), "yyyy-MM-dd")} – {deployment.endDate ? format(new Date(deployment.endDate), "yyyy-MM-dd") : "vyksta"}
-                              <span className="ml-2 font-medium">({deploymentDays(deployment)} d. / {deploymentWeeks(deployment)} sav.)</span>
+                              <span className="ml-2 font-medium">({deploymentDays(deployment)} d.)</span>
                             </p>
                             {deployment.notes ? <p className="mt-1 text-xs text-muted">{deployment.notes}</p> : null}
                           </div>

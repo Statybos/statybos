@@ -5,6 +5,7 @@ import {
   addDays,
   addMonths,
   eachDayOfInterval,
+  differenceInCalendarDays,
   endOfMonth,
   endOfWeek,
   format,
@@ -77,6 +78,16 @@ type StaffTone = "green" | "yellow" | "red" | "blue" | "grey";
 
 function toInputDate(d: Date) {
   return format(d, "yyyy-MM-dd");
+}
+
+function deploymentDays(deployment: DeploymentRow) {
+  const start = new Date(deployment.startDate);
+  const end = deployment.endDate ? new Date(deployment.endDate) : new Date();
+  return Math.max(1, differenceInCalendarDays(end, start) + 1);
+}
+
+function deploymentWeeks(deployment: DeploymentRow) {
+  return Math.ceil(deploymentDays(deployment) / 7);
 }
 
 function dayInRange(day: Date, startIso: string, endIso: string | null) {
@@ -907,6 +918,7 @@ export function DeploymentPlanner({
                     : work
                       ? "Komandiruotėje"
                       : "Priskirtas, bet nedirba";
+                  const activePeriod = leave ?? work;
                   return (
                     <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                       <div>
@@ -916,6 +928,11 @@ export function DeploymentPlanner({
                         <p className={`mt-1 text-xs font-semibold ${leave ? "text-sky-700" : work ? "text-emerald-700" : "text-slate-500"}`}>
                           {currentStatus}
                         </p>
+                        {activePeriod ? (
+                          <p className="mt-1 text-xs text-muted">
+                            {deploymentDays(activePeriod)} d. / {deploymentWeeks(activePeriod)} sav. nuo {format(new Date(activePeriod.startDate), "yyyy-MM-dd")}
+                          </p>
+                        ) : null}
                         <label className="mt-1 block text-xs text-muted">
                           Priskirtas objektas
                           <select
