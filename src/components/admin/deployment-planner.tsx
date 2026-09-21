@@ -321,14 +321,14 @@ export function DeploymentPlanner({
     });
   }
 
-  function assignWorker(employeeId: string, from?: string, to?: string) {
+  function assignWorker(employeeId: string, from?: string, to?: string, openEnded = false) {
     if (!selected) return;
     const fd = new FormData();
     fd.set("employeeId", employeeId);
     fd.set("objectId", selected.id);
     fd.set("type", "WORK");
     fd.set("startDate", from ?? rangeStart);
-    if (assignHasEnd) fd.set("endDate", to ?? rangeEnd);
+    if (assignHasEnd && !openEnded) fd.set("endDate", to ?? rangeEnd);
     fd.set("notes", notes || "Priskyrimas objektui");
     start(async () => {
       const result = await createDeployment(fd);
@@ -795,9 +795,8 @@ export function DeploymentPlanner({
                                       leave
                                         ? toInputDate(selectedDay)
                                         : toInputDate(selectedDay),
-                                      leave
-                                        ? leave.until ? toInputDate(new Date(leave.until)) : undefined
-                                        : toInputDate(addDays(selectedDay, 21)),
+                                      undefined,
+                                      true,
                                     );
                                   }}
                                   className="rounded-lg bg-navy px-2.5 py-1 text-xs font-semibold text-white"
