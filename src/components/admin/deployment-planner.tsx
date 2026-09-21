@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   addDays,
   addMonths,
@@ -144,6 +145,7 @@ export function DeploymentPlanner({
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
   const [selectedDay, setSelectedDay] = useState<Date | null>(() => startOfDay(new Date()));
   const [pending, start] = useTransition();
+  const router = useRouter();
   const [showObjectForm, setShowObjectForm] = useState(false);
   const [headcountDraft, setHeadcountDraft] = useState<number | null>(null);
 
@@ -337,6 +339,7 @@ export function DeploymentPlanner({
         return;
       }
       toast.success("Darbuotojas priskirtas");
+      router.refresh();
       setAssignEmployeeId("");
       setNotes("");
     });
@@ -361,6 +364,7 @@ export function DeploymentPlanner({
         return;
       }
       toast.success("Atostogos pažymėtos");
+      router.refresh();
       setVacationEmployeeId("");
     });
   }
@@ -998,6 +1002,7 @@ export function DeploymentPlanner({
                                     }
                                     setEditingDeploymentId(null);
                                     toast.success("Atostogų datos atnaujintos");
+                                    router.refresh();
                                   })
                                 }
                                 className="rounded-lg bg-navy px-2 py-1 text-xs text-white disabled:opacity-50"
@@ -1059,6 +1064,7 @@ export function DeploymentPlanner({
                                     }
                                     setEditingDeploymentId(null);
                                     toast.success("Objekto datos atnaujintos");
+                                    router.refresh();
                                   })
                                 }
                                 className="rounded-lg bg-navy px-2 py-1 text-xs text-white disabled:opacity-50"

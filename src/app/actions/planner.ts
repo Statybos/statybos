@@ -101,6 +101,28 @@ async function ensureWorkAfterVacation(employeeId: string, objectId: string | nu
   });
 }
 
+async function clearAwayForWork(employeeId: string, workStart: Date, workEnd: Date | null) {
+  const awayPeriods = await prisma.deployment.findMany({
+    where: {
+      employeeId,
+      type: { in: ["VACATION_LT", "TRANSIT"] },
+      isActive: true,
+      ...dateOverlap(workStart, workEnd ?? new Date("9999-12-31")),
+    },
+  });
+
+  for (const away of awayPeriods) {
+    if (away.startDate < workStart) {
+      await prisma.deployment.update({
+        where: { id: away.id },
+        data: { endDate: new Date(workStart.getTime() - DAY_MS) },
+      });
+    } else {
+      await prisma.deployment.delete({ where: { id: away.id } });
+    }
+  }
+}
+
 export async function upsertObject(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const requiredRaw = Number(formData.get("requiredHeadcount") ?? 1);
@@ -170,6 +192,7 @@ export async function updateEmployeeObject(employeeId: string, objectId: string 
   if (objectId) {
     try {
       await closePersonalTripsBeforeWork(employeeId, now, null);
+      await clearAwayForWork(employeeId, now, null);
     } catch (error) {
       return { error: error instanceof Error ? error.message : "Konfliktas su asmenine komandiruote." };
     }
@@ -268,6 +291,7 @@ export async function createDeployment(formData: FormData) {
     }
     try {
       await closePersonalTripsBeforeWork(employeeId, startDate, endDate);
+      await clearAwayForWork(employeeId, startDate, endDate);
     } catch (error) {
       return { error: error instanceof Error ? error.message : "Konfliktas su asmenine komandiruote." };
     }
@@ -498,6 +522,7 @@ export async function updateDeploymentDates(id: string, startValue: string, endV
   if (deployment.type === "WORK") {
     try {
       await closePersonalTripsBeforeWork(deployment.employeeId, startDate, endDate);
+      await clearAwayForWork(deployment.employeeId, startDate, endDate);
     } catch (error) {
       return { error: error instanceof Error ? error.message : "Konfliktas su asmenine komandiruote." };
     }
