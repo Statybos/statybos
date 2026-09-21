@@ -369,6 +369,25 @@ export function DeploymentPlanner({
     });
   }
 
+  function markEmployeeVacation(employeeId: string, startDate: string, endDate: string) {
+    const fd = new FormData();
+    fd.set("employeeId", employeeId);
+    fd.set("type", "VACATION_LT");
+    fd.set("startDate", startDate);
+    if (endDate) fd.set("endDate", endDate);
+    fd.set("notes", "Atostogos LT");
+    if (selected) fd.set("objectId", selected.id);
+    start(async () => {
+      const result = await createDeployment(fd);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Atostogos pažymėtos");
+      router.refresh();
+    });
+  }
+
   function createObject(formData: FormData) {
     start(async () => {
       const result = await upsertObject(formData);
@@ -1131,16 +1150,38 @@ export function DeploymentPlanner({
                             Baigti atostogas
                           </button>
                         ) : (
-                          <button
-                            type="button"
-                            className="rounded-lg border px-2 py-1 text-xs"
-                            onClick={() => {
-                              setVacationEmployeeId(e.id);
-                              toast.message("Pasirinkite datas ir spauskite „Pažymėti atostogas“");
-                            }}
-                          >
-                            Atostogos
-                          </button>
+                          <div className="flex flex-wrap items-center justify-end gap-1.5">
+                            <input
+                              type="date"
+                              defaultValue={toInputDate(today)}
+                              aria-label={`${e.firstName} atostogų pradžia`}
+                              className="w-32 rounded-lg border px-2 py-1 text-xs"
+                              id={`vacation-start-${e.id}`}
+                            />
+                            <input
+                              type="date"
+                              defaultValue={toInputDate(addDays(today, 14))}
+                              aria-label={`${e.firstName} atostogų pabaiga`}
+                              className="w-32 rounded-lg border px-2 py-1 text-xs"
+                              id={`vacation-end-${e.id}`}
+                            />
+                            <button
+                              type="button"
+                              disabled={pending}
+                              className="rounded-lg border border-sky-200 px-2 py-1 text-xs text-sky-700"
+                              onClick={() => {
+                                const startInput = document.getElementById(`vacation-start-${e.id}`) as HTMLInputElement | null;
+                                const endInput = document.getElementById(`vacation-end-${e.id}`) as HTMLInputElement | null;
+                                if (!startInput?.value) {
+                                  toast.error("Pasirinkite atostogų pradžią");
+                                  return;
+                                }
+                                markEmployeeVacation(e.id, startInput.value, endInput?.value ?? "");
+                              }}
+                            >
+                              Atostogos
+                            </button>
+                          </div>
                         )}
                       </div>
                     </li>
