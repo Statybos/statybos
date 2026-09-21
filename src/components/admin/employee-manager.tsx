@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { differenceInCalendarDays, format } from "date-fns";
 import { toast } from "sonner";
 import { Euro, MapPin, Phone, Pencil, Plane, Trash2, UserX } from "lucide-react";
@@ -131,6 +132,7 @@ export function EmployeeManager({
   const [dismissId, setDismissId] = useState<string | null>(null);
   const [dismissDate, setDismissDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [pending, start] = useTransition();
+  const router = useRouter();
 
   const counts = useMemo(() => {
     const scopedEmployees = objectId
@@ -237,14 +239,20 @@ export function EmployeeManager({
         return;
       }
       toast.success("Komandiruotė uždaryta");
+      router.refresh();
     });
   }
 
   function removeTrip(deploymentId: string) {
     if (!window.confirm("Ištrinti šią komandiruotę iš istorijos?")) return;
     start(async () => {
-      await deleteDeployment(deploymentId);
+      const result = await deleteDeployment(deploymentId);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
       toast.success("Komandiruotė ištrinta");
+      router.refresh();
     });
   }
 
