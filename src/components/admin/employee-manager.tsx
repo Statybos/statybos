@@ -100,6 +100,15 @@ function isEmployeeTrip(deployment: DeploymentRow) {
   return deployment.type === "WORK" || deployment.type === "PERSONAL_TRIP";
 }
 
+function isCurrentTrip(deployment: DeploymentRow) {
+  const now = new Date();
+  return (
+    isEmployeeTrip(deployment) &&
+    new Date(deployment.startDate) <= now &&
+    (!deployment.endDate || new Date(deployment.endDate) >= now)
+  );
+}
+
 function isEmployeeAway(deployment: DeploymentRow) {
   return deployment.type === "VACATION_LT" || deployment.type === "TRANSIT";
 }
@@ -107,8 +116,7 @@ function isEmployeeAway(deployment: DeploymentRow) {
 function currentDeploymentForEmployee(employee: EmployeeRow) {
   return employee.deployments.find(
     (deployment) =>
-      isCurrentDeployment(deployment) &&
-      isEmployeeTrip(deployment),
+      isCurrentTrip(deployment),
   );
 }
 
@@ -143,7 +151,7 @@ export function EmployeeManager({
       UNASSIGNED: employees.filter((employee) => !employee.assignedObjectId).length,
       TRIP: scopedEmployees.filter((employee) =>
         employee.deployments.some(
-          (deployment) => isEmployeeTrip(deployment) && isCurrentDeployment(deployment),
+          (deployment) => isCurrentTrip(deployment),
         ),
       ).length,
       ON_LEAVE: scopedEmployees.filter((employee) =>
@@ -170,7 +178,7 @@ export function EmployeeManager({
       if (
         view === "TRIP" &&
         !e.deployments.some(
-          (deployment) => isEmployeeTrip(deployment) && isCurrentDeployment(deployment),
+          (deployment) => isCurrentTrip(deployment),
         )
       ) {
         return false;
@@ -540,7 +548,7 @@ export function EmployeeManager({
               <div className="flex items-center justify-between gap-3">
                 <h3 className="font-semibold text-navy">Komandiruotė</h3>
                 {selectedEmployee.deployments.some(
-                  (deployment) => isEmployeeTrip(deployment) && isCurrentDeployment(deployment),
+                  (deployment) => isCurrentTrip(deployment),
                 ) ? (
                   <span className="inline-flex items-center gap-1 text-sm font-semibold text-orange-600">
                     <Plane className="h-4 w-4" /> Vyksta
@@ -552,7 +560,7 @@ export function EmployeeManager({
                 )}
               </div>
               {!selectedEmployee.deployments.some(
-                (deployment) => isEmployeeTrip(deployment) && isCurrentDeployment(deployment),
+                (deployment) => isCurrentTrip(deployment),
               ) && selectedEmployee.status !== "INACTIVE" ? (
                 <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
                   <input
