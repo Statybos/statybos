@@ -96,7 +96,7 @@ function isCurrentDeployment(deployment: DeploymentRow) {
 }
 
 function isEmployeeTrip(deployment: DeploymentRow) {
-  return deployment.type === "PERSONAL_TRIP";
+  return deployment.type === "WORK" || deployment.type === "PERSONAL_TRIP";
 }
 
 function isEmployeeAway(deployment: DeploymentRow) {
@@ -586,7 +586,7 @@ export function EmployeeManager({
                             <p className="font-medium text-navy">
                               {deployment.object
                                 ? `${deployment.object.country} – ${deployment.object.title}`
-                                : "Komandiruotė"}
+                                : deployment.type === "PERSONAL_TRIP" ? "Asmeninė komandiruotė" : "Komandiruotė"}
                             </p>
                             <p className="text-muted">
                               {format(new Date(deployment.startDate), "yyyy-MM-dd")} – {deployment.endDate ? format(new Date(deployment.endDate), "yyyy-MM-dd") : "vyksta"}
