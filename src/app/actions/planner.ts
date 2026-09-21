@@ -107,10 +107,28 @@ export async function updateEmployeeObject(employeeId: string, objectId: string 
 
   if (objectId) {
     if (currentWorkDeployment) {
-      await prisma.deployment.update({
-        where: { id: currentWorkDeployment.id },
-        data: { objectId },
-      });
+      if (currentWorkDeployment.objectId === objectId) {
+        await prisma.employee.update({
+          where: { id: employeeId },
+          data: { assignedObjectId: objectId },
+        });
+      } else {
+        await prisma.deployment.update({
+          where: { id: currentWorkDeployment.id },
+          data: { endDate: now, isActive: false, closedAt: now },
+        });
+        await prisma.deployment.create({
+          data: {
+            employeeId,
+            objectId,
+            startDate: now,
+            endDate: null,
+            type: "WORK",
+            isActive: true,
+            notes: "Priskyrimas objektui",
+          },
+        });
+      }
     } else {
       await prisma.deployment.create({
         data: {

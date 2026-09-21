@@ -286,6 +286,21 @@ export function DeploymentPlanner({
     return { working, onLeave, present, required, tone, missing, replacements };
   }, [selected, selectedDay, employees, deployments]);
 
+  const availableEmployees = useMemo(() => {
+    const day = selectedDay ?? today;
+    return employees
+      .filter((employee) => {
+        if (employee.status === "INACTIVE" || isAway(employee.id, day)) return false;
+        return !deployments.some(
+          (deployment) =>
+            deployment.employeeId === employee.id &&
+            deployment.type === "WORK" &&
+            dayInRange(day, deployment.startDate, deployment.endDate),
+        );
+      })
+      .sort((a, b) => a.lastName.localeCompare(b.lastName, "lt"));
+  }, [employees, deployments, selectedDay, today]);
+
   function saveHeadcount() {
     if (!selected || headcountDraft == null) return;
     start(async () => {
@@ -350,8 +365,6 @@ export function DeploymentPlanner({
       setShowObjectForm(false);
     });
   }
-
-  const bench = employees.filter((e) => e.status === "BENCH_LT");
 
   return (
     <div className="min-h-screen bg-[#f4f6f9] p-4 md:p-6">
@@ -744,12 +757,11 @@ export function DeploymentPlanner({
                       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-red-700">
                         Galimi pakeitimai
                       </p>
-                      {(dayDetail.replacements.length ? dayDetail.replacements : bench).length === 0 ? (
+                      {dayDetail.replacements.length === 0 ? (
                         <p className="text-sm text-muted">Nėra laisvų kandidatų.</p>
                       ) : (
                         <ul className="space-y-2">
-                          {(dayDetail.replacements.length ? dayDetail.replacements : bench)
-                            .slice(0, 6)
+                          {dayDetail.replacements.slice(0, 6)
                             .map((e) => (
                               <li
                                 key={e.id}
@@ -803,7 +815,7 @@ export function DeploymentPlanner({
                   className="rounded-lg border px-2 py-1.5 text-sm sm:col-span-2"
                 >
                   <option value="">Laisvas personalas…</option>
-                  {bench.map((e) => (
+                  {availableEmployees.map((e) => (
                     <option key={e.id} value={e.id}>
                       {e.firstName} {e.lastName}
                     </option>
