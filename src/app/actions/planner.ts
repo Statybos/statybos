@@ -399,12 +399,24 @@ export async function updateDeploymentDates(id: string, startValue: string, endV
           ? { in: ["VACATION_LT", "TRANSIT", "PERSONAL_TRIP"] }
           : "PERSONAL_TRIP",
       isActive: true,
-      ...dateOverlap(startDate, endDate ?? new Date("9999-12-31")),
+      AND: [
+        { OR: [{ endDate: null }, { endDate: { gte: new Date() } }] },
+        dateOverlap(startDate, endDate ?? new Date("9999-12-31")),
+      ],
     },
   });
 
   if (overlap) {
-    return { error: "Konfliktas: pasirinktos datos persidengia su kitu darbuotojo statusu." };
+    const typeLabel = overlap.type === "WORK"
+      ? "darbas kitame objekte"
+      : overlap.type === "PERSONAL_TRIP"
+        ? "asmeninė komandiruotė"
+        : overlap.type === "TRANSIT"
+          ? "tranzitas"
+          : "atostogos";
+    return {
+      error: `Konfliktas: datos persidengia su įrašu „${typeLabel}“ nuo ${overlap.startDate.toISOString().slice(0, 10)}${overlap.endDate ? ` iki ${overlap.endDate.toISOString().slice(0, 10)}` : " (be pabaigos)"}.`,
+    };
   }
 
   await prisma.deployment.update({
