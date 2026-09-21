@@ -51,7 +51,8 @@ async function closePersonalTripsBeforeWork(employeeId: string, workStart: Date,
 
   for (const trip of trips) {
     if (trip.startDate >= workStart) {
-      throw new Error("Asmeninė komandiruotė prasideda po darbo objekte pradžios.");
+      await prisma.deployment.delete({ where: { id: trip.id } });
+      continue;
     }
     await prisma.deployment.update({
       where: { id: trip.id },
