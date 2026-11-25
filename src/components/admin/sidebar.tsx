@@ -2,7 +2,6 @@ import Link from "next/link";
 import { logoutAction } from "@/app/actions/auth";
 import {
   Briefcase,
-  CalendarRange,
   FileText,
   HardHat,
   LayoutList,
@@ -12,7 +11,6 @@ import {
 
 const links = [
   { href: "/admin/darbuotojai", label: "Darbuotojai", icon: Users },
-  { href: "/admin/planuoklis", label: "Planuoklis", icon: CalendarRange },
   { href: "/admin/kandidatai", label: "Kandidatai", icon: LayoutList },
   { href: "/admin/skelbimai", label: "Skelbimai", icon: Briefcase },
   { href: "/admin/saskaitos", label: "Sąskaitų priminimai", icon: FileText },

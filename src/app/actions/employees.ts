@@ -50,44 +50,64 @@ export async function upsertEmployee(formData: FormData) {
     const existing = await prisma.employee.findUnique({ where: { id } });
     if (!existing) return { error: "Darbuotojas nerastas" };
 
+    const now = new Date();
+    const todayStart = new Date(now);
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const todayEnd = new Date(now);
+    todayEnd.setUTCHours(23, 59, 59, 999);
+    const currentWorkDeployment = await prisma.deployment.findFirst({
+      where: {
+        employeeId: id,
+        type: "WORK",
+        isActive: true,
+        startDate: { lte: todayEnd },
+        OR: [{ endDate: null }, { endDate: { gte: todayStart } }],
+      },
+      orderBy: { startDate: "desc" },
+    });
+
     if (existing.assignedObjectId !== data.assignedObjectId) {
-      const now = new Date();
-      const currentWorkDeployment = await prisma.deployment.findFirst({
+      const currentAwayDeployment = await prisma.deployment.findFirst({
         where: {
           employeeId: id,
-          type: "WORK",
+          type: { in: ["VACATION_LT", "TRANSIT"] },
           isActive: true,
-          startDate: { lte: now },
-          OR: [{ endDate: null }, { endDate: { gte: now } }],
+          startDate: { lte: todayEnd },
+          OR: [{ endDate: null }, { endDate: { gte: todayStart } }],
         },
-        orderBy: { startDate: "desc" },
+        select: { id: true },
       });
+      if (currentAwayDeployment) {
+        return { error: "Atostogaujančio darbuotojo perkelti į kitą objektą negalima" };
+      }
+    }
 
-      if (data.assignedObjectId) {
+    if (data.assignedObjectId && status !== "INACTIVE") {
+      if (currentWorkDeployment?.objectId !== data.assignedObjectId) {
         if (currentWorkDeployment) {
           await prisma.deployment.update({
             where: { id: currentWorkDeployment.id },
-            data: { objectId: data.assignedObjectId },
-          });
-        } else {
-          await prisma.deployment.create({
-            data: {
-              employeeId: id,
-              objectId: data.assignedObjectId,
-              startDate: now,
-              endDate: null,
-              type: "WORK",
-              isActive: true,
-              notes: "Priskyrimas objektui",
-            },
+            data: { endDate: now, isActive: false, closedAt: now },
           });
         }
-      } else if (currentWorkDeployment) {
-        await prisma.deployment.update({
-          where: { id: currentWorkDeployment.id },
-          data: { endDate: now, isActive: false, closedAt: now },
+
+        await prisma.deployment.create({
+          data: {
+            employeeId: id,
+            objectId: data.assignedObjectId,
+            startDate: now,
+            endDate: null,
+            type: "WORK",
+            isActive: true,
+            notes: "Priskyrimas objektui",
+          },
         });
       }
+    } else if (currentWorkDeployment) {
+      await prisma.deployment.update({
+        where: { id: currentWorkDeployment.id },
+        data: { endDate: now, isActive: false, closedAt: now },
+      });
     }
 
     let wageHistory = parseWageHistory(existing.wageHistory);
@@ -107,13 +127,25 @@ export async function upsertEmployee(formData: FormData) {
       data.hourlyRate > 0
         ? JSON.stringify([{ rate: data.hourlyRate, changedAt: new Date().toISOString() }])
         : "[]";
-    await prisma.employee.create({
+    const createdEmployee = await prisma.employee.create({
       data: { ...data, wageHistory },
     });
+    if (data.assignedObjectId) {
+      const startDate = new Date();
+      await prisma.deployment.create({
+        data: {
+          employeeId: createdEmployee.id,
+          objectId: data.assignedObjectId,
+          startDate,
+          type: "WORK",
+          isActive: true,
+          notes: "Priskyrimas objektui",
+        },
+      });
+    }
   }
 
   revalidatePath("/admin/darbuotojai");
-  revalidatePath("/admin/planuoklis");
   return { ok: true as const };
 }
 
@@ -123,17 +155,42 @@ export async function dismissEmployee(employeeId: string, dismissedAt: string) {
     return { error: "Pasirinkite atleidimo datą" };
   }
 
+  const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
+  if (!employee) return { error: "Darbuotojas nerastas" };
+
+  await prisma.$transaction([
+    prisma.deployment.updateMany({
+      where: { employeeId, isActive: true, startDate: { lte: date } },
+      data: { endDate: date, isActive: false, closedAt: date },
+    }),
+    prisma.deployment.deleteMany({
+      where: { employeeId, isActive: true, startDate: { gt: date } },
+    }),
+    prisma.employee.update({
+      where: { id: employeeId },
+      data: {
+        status: "INACTIVE",
+        dismissedAt: date,
+        assignedObjectId: null,
+      },
+    }),
+  ]);
+
+  revalidatePath("/admin/darbuotojai");
+  return { ok: true as const };
+}
+
+export async function reinstateEmployee(employeeId: string) {
+  const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
+  if (!employee) return { error: "Darbuotojas nerastas" };
+  if (employee.status !== "INACTIVE") return { error: "Darbuotojas jau dirba" };
+
   await prisma.employee.update({
     where: { id: employeeId },
-    data: {
-      status: "INACTIVE",
-      dismissedAt: date,
-      assignedObjectId: null,
-    },
+    data: { status: "BENCH_LT", dismissedAt: null, assignedObjectId: null },
   });
 
   revalidatePath("/admin/darbuotojai");
-  revalidatePath("/admin/planuoklis");
   return { ok: true as const };
 }
 
@@ -168,5 +225,4 @@ export async function updateEmployeeWage(employeeId: string, hourlyRate: number)
 export async function deleteEmployee(id: string) {
   await prisma.employee.delete({ where: { id } });
   revalidatePath("/admin/darbuotojai");
-  revalidatePath("/admin/planuoklis");
 }

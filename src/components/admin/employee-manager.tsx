@@ -4,18 +4,32 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { differenceInCalendarDays, format } from "date-fns";
 import { toast } from "sonner";
-import { Euro, MapPin, Phone, Pencil, Plane, Trash2, UserX } from "lucide-react";
+import {
+  Euro,
+  MapPin,
+  Phone,
+  Pencil,
+  Plane,
+  RotateCcw,
+  Sun,
+  Trash2,
+  UserX,
+} from "lucide-react";
 import {
   deleteEmployee,
   dismissEmployee,
+  reinstateEmployee,
   updateEmployeeWage,
   upsertEmployee,
 } from "@/app/actions/employees";
 import {
   closeEmployeeDeployment,
+  createDeployment,
   deleteDeployment,
   startEmployeeDeployment,
-} from "@/app/actions/planner";
+  updateEmployeeObject,
+  upsertObject,
+} from "@/app/actions/deployments";
 import { SPECIALTIES } from "@/lib/constants";
 
 type ObjectOpt = { id: string; title: string; country: string };
@@ -51,7 +65,7 @@ type EmployeeRow = {
   deployments: DeploymentRow[];
 };
 
-type ViewFilter = "ALL" | "UNASSIGNED" | "TRIP" | "ON_LEAVE";
+type ViewFilter = "WORKING" | "UNASSIGNED" | "ON_LEAVE" | "INACTIVE" | "ALL";
 
 const empty = {
   id: "",
@@ -88,11 +102,11 @@ function deploymentDays(deployment: DeploymentRow) {
 }
 
 function isCurrentDeployment(deployment: DeploymentRow) {
-  const now = new Date();
+  const today = format(new Date(), "yyyy-MM-dd");
   return (
     deployment.isActive &&
-    new Date(deployment.startDate) <= now &&
-    (!deployment.endDate || new Date(deployment.endDate) >= now)
+    format(new Date(deployment.startDate), "yyyy-MM-dd") <= today &&
+    (!deployment.endDate || format(new Date(deployment.endDate), "yyyy-MM-dd") >= today)
   );
 }
 
@@ -101,11 +115,9 @@ function isEmployeeTrip(deployment: DeploymentRow) {
 }
 
 function isCurrentTrip(deployment: DeploymentRow) {
-  const now = new Date();
   return (
     isEmployeeTrip(deployment) &&
-    new Date(deployment.startDate) <= now &&
-    (!deployment.endDate || new Date(deployment.endDate) >= now)
+    isCurrentDeployment(deployment)
   );
 }
 
@@ -113,11 +125,20 @@ function isEmployeeAway(deployment: DeploymentRow) {
   return deployment.type === "VACATION_LT" || deployment.type === "TRANSIT";
 }
 
-function currentDeploymentForEmployee(employee: EmployeeRow) {
+function currentWorkForEmployee(employee: EmployeeRow) {
   return employee.deployments.find(
-    (deployment) =>
-      isCurrentTrip(deployment),
+    (deployment) => deployment.type === "WORK" && isCurrentDeployment(deployment),
   );
+}
+
+function currentAwayForEmployee(employee: EmployeeRow) {
+  return employee.deployments.find(
+    (deployment) => isEmployeeAway(deployment) && isCurrentDeployment(deployment),
+  );
+}
+
+function hasCurrentObject(employee: EmployeeRow) {
+  return Boolean(currentWorkForEmployee(employee) || employee.assignedObjectId);
 }
 
 export function EmployeeManager({
@@ -128,13 +149,18 @@ export function EmployeeManager({
   objects: ObjectOpt[];
 }) {
   const [q, setQ] = useState("");
-  const [view, setView] = useState<ViewFilter>("TRIP");
+  const [view, setView] = useState<ViewFilter>("WORKING");
   const [objectId, setObjectId] = useState("");
   const [form, setForm] = useState(empty);
   const [open, setOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeRow | null>(null);
   const [tripStartDate, setTripStartDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [tripNotes, setTripNotes] = useState("");
+  const [vacationStartDate, setVacationStartDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const [vacationEndDate, setVacationEndDate] = useState("");
+  const [newObjectOpen, setNewObjectOpen] = useState(false);
+  const [newObjectTitle, setNewObjectTitle] = useState("");
+  const [newObjectCountry, setNewObjectCountry] = useState("");
   const [wageEditId, setWageEditId] = useState<string | null>(null);
   const [wageDraft, setWageDraft] = useState("");
   const [dismissId, setDismissId] = useState<string | null>(null);
@@ -146,19 +172,20 @@ export function EmployeeManager({
     const scopedEmployees = objectId
       ? employees.filter((employee) => employee.assignedObjectId === objectId)
       : employees;
+    const activeEmployees = scopedEmployees.filter((employee) => employee.status !== "INACTIVE");
     return {
-      ALL: scopedEmployees.length,
-      UNASSIGNED: employees.filter((employee) => !employee.assignedObjectId).length,
-      TRIP: scopedEmployees.filter((employee) =>
-        employee.deployments.some(
-          (deployment) => isCurrentTrip(deployment),
-        ),
+      ALL: activeEmployees.length,
+      WORKING: activeEmployees.filter(
+        (employee) => hasCurrentObject(employee) && !currentAwayForEmployee(employee),
       ).length,
-      ON_LEAVE: scopedEmployees.filter((employee) =>
-        employee.deployments.some(
-          (deployment) => isEmployeeAway(deployment) && isCurrentDeployment(deployment),
-        ),
+      UNASSIGNED: employees.filter(
+        (employee) =>
+          employee.status !== "INACTIVE" &&
+          !hasCurrentObject(employee) &&
+          !currentAwayForEmployee(employee),
       ).length,
+      ON_LEAVE: activeEmployees.filter((employee) => currentAwayForEmployee(employee)).length,
+      INACTIVE: scopedEmployees.filter((employee) => employee.status === "INACTIVE").length,
     };
   }, [employees, objectId]);
 
@@ -172,23 +199,22 @@ export function EmployeeManager({
       ) {
         return false;
       }
-      if (view === "UNASSIGNED" && e.assignedObjectId) {
+      if (view === "ALL" && e.status === "INACTIVE") return false;
+      if (view === "INACTIVE" && e.status !== "INACTIVE") return false;
+      if (view === "WORKING" && (
+        e.status === "INACTIVE" ||
+        !hasCurrentObject(e) ||
+        Boolean(currentAwayForEmployee(e))
+      )) {
         return false;
       }
-      if (
-        view === "TRIP" &&
-        !e.deployments.some(
-          (deployment) => isCurrentTrip(deployment),
-        )
-      ) {
+      if (view === "UNASSIGNED" && hasCurrentObject(e)) {
         return false;
       }
-      if (
-        view === "ON_LEAVE" &&
-        !e.deployments.some(
-          (deployment) => isEmployeeAway(deployment) && isCurrentDeployment(deployment),
-        )
-      ) {
+      if (view === "UNASSIGNED" && (e.status === "INACTIVE" || currentAwayForEmployee(e))) {
+        return false;
+      }
+      if (view === "ON_LEAVE" && (e.status === "INACTIVE" || !currentAwayForEmployee(e))) {
         return false;
       }
       if (!query) return true;
@@ -220,6 +246,8 @@ export function EmployeeManager({
     setSelectedEmployee(e);
     setTripStartDate(format(new Date(), "yyyy-MM-dd"));
     setTripNotes("");
+    setVacationStartDate(format(new Date(), "yyyy-MM-dd"));
+    setVacationEndDate("");
   }
 
   function startTrip() {
@@ -236,6 +264,77 @@ export function EmployeeManager({
       }
       toast.success("Komandiruotė pradėta");
       setTripNotes("");
+      setSelectedEmployee(null);
+      router.refresh();
+    });
+  }
+
+  function markVacation() {
+    if (!selectedEmployee) return;
+    if (!vacationEndDate) {
+      toast.error("Pasirinkite atostogų pabaigos datą");
+      return;
+    }
+
+    const fd = new FormData();
+    fd.set("employeeId", selectedEmployee.id);
+    fd.set("objectId", currentWorkForEmployee(selectedEmployee)?.objectId ?? selectedEmployee.assignedObjectId ?? "");
+    fd.set("type", "VACATION_LT");
+    fd.set("startDate", vacationStartDate);
+    fd.set("endDate", vacationEndDate);
+    fd.set("notes", "Atostogos");
+    start(async () => {
+      const result = await createDeployment(fd);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Atostogos pažymėtos");
+      setSelectedEmployee(null);
+      router.refresh();
+    });
+  }
+
+  function moveEmployee(employeeId: string, nextObjectId: string) {
+    start(async () => {
+      const result = await updateEmployeeObject(employeeId, nextObjectId || null);
+      if (result?.error) {
+        toast.error(result.error);
+        router.refresh();
+        return;
+      }
+      toast.success(nextObjectId ? "Darbuotojas perkeltas į objektą" : "Darbuotojas atlaisvintas iš objekto");
+      router.refresh();
+    });
+  }
+
+  function restoreEmployee(employeeId: string) {
+    start(async () => {
+      const result = await reinstateEmployee(employeeId);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Darbuotojas grąžintas į darbą");
+      router.refresh();
+    });
+  }
+
+  function saveObject() {
+    const formData = new FormData();
+    formData.set("title", newObjectTitle);
+    formData.set("country", newObjectCountry);
+    start(async () => {
+      const result = await upsertObject(formData);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Objektas sukurtas");
+      setNewObjectTitle("");
+      setNewObjectCountry("");
+      setNewObjectOpen(false);
+      router.refresh();
     });
   }
 
@@ -247,6 +346,7 @@ export function EmployeeManager({
         return;
       }
       toast.success("Komandiruotė uždaryta");
+      setSelectedEmployee(null);
       router.refresh();
     });
   }
@@ -277,6 +377,8 @@ export function EmployeeManager({
     });
   }
 
+  const selectedWork = selectedEmployee ? currentWorkForEmployee(selectedEmployee) : null;
+
   return (
     <div className="p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -292,6 +394,14 @@ export function EmployeeManager({
             className="rounded-lg border bg-white px-3 py-2 text-sm"
           />
           <button
+            type="button"
+            className="rounded-lg border bg-white px-3 py-2 text-sm font-medium text-navy"
+            onClick={() => setNewObjectOpen((current) => !current)}
+          >
+            + Naujas objektas
+          </button>
+          <button
+            type="button"
             className="rounded-lg bg-amber px-3 py-2 text-sm font-semibold text-navy"
             onClick={() => {
               setForm(empty);
@@ -303,13 +413,53 @@ export function EmployeeManager({
         </div>
       </div>
 
+      {newObjectOpen ? (
+        <div className="mb-4 flex flex-wrap items-end gap-2 rounded-xl border bg-white p-3">
+          <label className="grid gap-1 text-xs text-muted">
+            Objekto pavadinimas
+            <input
+              value={newObjectTitle}
+              onChange={(event) => setNewObjectTitle(event.target.value)}
+              className="rounded-lg border px-3 py-2 text-sm text-ink"
+              required
+            />
+          </label>
+          <label className="grid gap-1 text-xs text-muted">
+            Šalis
+            <input
+              value={newObjectCountry}
+              onChange={(event) => setNewObjectCountry(event.target.value)}
+              placeholder="pvz. Suomija"
+              className="rounded-lg border px-3 py-2 text-sm text-ink"
+              required
+            />
+          </label>
+          <button
+            type="button"
+            disabled={pending || !newObjectTitle.trim() || !newObjectCountry.trim()}
+            onClick={saveObject}
+            className="rounded-lg bg-navy px-3 py-2 text-sm text-white disabled:opacity-50"
+          >
+            Sukurti objektą
+          </button>
+          <button
+            type="button"
+            onClick={() => setNewObjectOpen(false)}
+            className="rounded-lg border px-3 py-2 text-sm"
+          >
+            Atšaukti
+          </button>
+        </div>
+      ) : null}
+
       <div className="mb-4 flex flex-wrap gap-2">
         {(
           [
-            ["ALL", `Visi (${counts.ALL})`],
-            ["TRIP", `Komandiruotėje (${counts.TRIP})`],
-            ["ON_LEAVE", `Atostogos (${counts.ON_LEAVE})`],
+            ["WORKING", `Dirba objektuose (${counts.WORKING})`],
             ["UNASSIGNED", `Nepriskirti (${counts.UNASSIGNED})`],
+            ["ON_LEAVE", `Atostogauja (${counts.ON_LEAVE})`],
+            ["ALL", `Visi dirbantys (${counts.ALL})`],
+            ["INACTIVE", `Atleisti (${counts.INACTIVE})`],
           ] as const
         ).map(([key, label]) => (
           <button
@@ -327,7 +477,6 @@ export function EmployeeManager({
           value={objectId}
           onChange={(e) => {
             setObjectId(e.target.value);
-            setView("TRIP");
           }}
           className="rounded-full border bg-white px-3 py-1.5 text-sm"
         >
@@ -344,7 +493,13 @@ export function EmployeeManager({
         {rows.map((e) => {
           const history = parseHistory(e.wageHistory);
           const lastChange = history[0];
-          const activeDeployment = currentDeploymentForEmployee(e);
+          const activeWork = currentWorkForEmployee(e);
+          const currentAway = currentAwayForEmployee(e);
+          const activeTrip = e.deployments.find(
+            (deployment) => deployment.type === "PERSONAL_TRIP" && isCurrentDeployment(deployment),
+          );
+          const currentObjectId = activeWork?.objectId ?? e.assignedObjectId ?? "";
+          const currentObject = activeWork?.object ?? e.assignedObject;
           const editingWage = wageEditId === e.id;
           return (
             <article
@@ -364,16 +519,29 @@ export function EmployeeManager({
                 <button
                   type="button"
                   onClick={() => openEmployee(e)}
-                  title={activeDeployment ? "Aktyvi komandiruotė" : "Nėra aktyvios komandiruotės"}
-                  className={activeDeployment ? "rounded-md p-1 text-orange-500 hover:bg-orange-50" : "rounded-md p-1 text-emerald-600 hover:bg-emerald-50"}
+                  title={activeTrip ? "Vyksta asmeninė komandiruotė" : "Darbuotojo informacija"}
+                  className={activeTrip ? "rounded-md p-1 text-orange-500 hover:bg-orange-50" : "rounded-md p-1 text-emerald-600 hover:bg-emerald-50"}
                 >
                   <Plane className="h-5 w-5" />
                 </button>
               </div>
 
-              {activeDeployment ? (
+              {activeWork ? (
                 <p className="mb-2 text-xs font-medium text-orange-700">
-                  Komandiruotėje nuo {format(new Date(activeDeployment.startDate), "yyyy-MM-dd")}
+                  Dirba objekte nuo {format(new Date(activeWork.startDate), "yyyy-MM-dd")}
+                </p>
+              ) : currentObjectId && e.status !== "INACTIVE" ? (
+                <p className="mb-2 text-xs font-medium text-muted">Objektas priskirtas, pradžios data nenurodyta</p>
+              ) : null}
+              {activeTrip ? (
+                <p className="mb-2 text-xs font-medium text-orange-700">
+                  Komandiruotėje nuo {format(new Date(activeTrip.startDate), "yyyy-MM-dd")}
+                </p>
+              ) : null}
+              {currentAway ? (
+                <p className="mb-2 inline-flex items-center gap-1 text-xs font-semibold text-amber-800">
+                  <Sun className="h-3.5 w-3.5" />
+                  Atostogauja {format(new Date(currentAway.startDate), "yyyy-MM-dd")}–{currentAway.endDate ? format(new Date(currentAway.endDate), "yyyy-MM-dd") : "pabaiga nenurodyta"}
                 </p>
               ) : null}
 
@@ -385,8 +553,8 @@ export function EmployeeManager({
                 <p className="inline-flex items-start gap-1.5 font-medium text-navy">
                   <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   <span>
-                    {e.assignedObject
-                      ? `${e.assignedObject.country} – ${e.assignedObject.title}`
+                    {currentObject
+                      ? `${currentObject.country} – ${currentObject.title}`
                       : "Objektas nepriskirtas"}
                   </span>
                 </p>
@@ -396,6 +564,24 @@ export function EmployeeManager({
                   </p>
                 ) : null}
               </div>
+              {e.status !== "INACTIVE" ? (
+                <label className="mt-3 grid gap-1 text-xs font-medium text-muted">
+                  Perkelti į objektą
+                  <select
+                    value={currentObjectId}
+                    disabled={pending || Boolean(currentAway)}
+                    onChange={(event) => moveEmployee(e.id, event.target.value)}
+                    className="rounded-lg border bg-white px-2 py-2 text-sm text-navy disabled:bg-slate-100"
+                  >
+                    <option value="">Nepriskirtas</option>
+                    {objects.map((object) => (
+                      <option key={object.id} value={object.id}>
+                        {object.country} – {object.title}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
 
               <div className="mt-3 rounded-xl bg-sand/80 p-3">
                 <div className="mb-1 flex items-center justify-between gap-2">
@@ -469,7 +655,17 @@ export function EmployeeManager({
                     <UserX className="h-3.5 w-3.5" />
                     Atleisti
                   </button>
-                ) : null}
+                ) : (
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => restoreEmployee(e.id)}
+                    className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-2 py-1.5 text-sm text-emerald-700 disabled:opacity-50"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Grąžinti į darbą
+                  </button>
+                )}
               </div>
             </article>
           );
@@ -537,12 +733,74 @@ export function EmployeeManager({
               <div className="sm:col-span-2">
                 <dt className="text-muted">Objektas</dt>
                 <dd className="font-medium text-navy">
-                  {selectedEmployee.assignedObject
-                    ? `${selectedEmployee.assignedObject.country} – ${selectedEmployee.assignedObject.title}`
+                  {selectedWork?.object ?? selectedEmployee.assignedObject
+                    ? `${(selectedWork?.object ?? selectedEmployee.assignedObject)?.country} – ${(selectedWork?.object ?? selectedEmployee.assignedObject)?.title}`
                     : "Objektas nepriskirtas"}
                 </dd>
+                {selectedWork ? (
+                  <dd className="mt-1 text-xs text-muted">
+                    Objekte nuo {format(new Date(selectedWork.startDate), "yyyy-MM-dd")}
+                  </dd>
+                ) : null}
               </div>
             </dl>
+
+            <section className="mt-6 border-t pt-4">
+              <h3 className="inline-flex items-center gap-2 font-semibold text-navy">
+                <Sun className="h-4 w-4 text-amber-600" />
+                Atostogos
+              </h3>
+              {selectedEmployee.status !== "INACTIVE" ? (
+                <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                  <label className="grid gap-1 text-xs text-muted">
+                    Nuo
+                    <input
+                      type="date"
+                      value={vacationStartDate}
+                      onChange={(event) => setVacationStartDate(event.target.value)}
+                      className="rounded-lg border px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <label className="grid gap-1 text-xs text-muted">
+                    Iki
+                    <input
+                      type="date"
+                      value={vacationEndDate}
+                      onChange={(event) => setVacationEndDate(event.target.value)}
+                      className="rounded-lg border px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    disabled={pending || !vacationEndDate}
+                    onClick={markVacation}
+                    className="self-end rounded-lg bg-amber px-3 py-2 text-sm font-semibold text-navy disabled:opacity-50"
+                  >
+                    Pažymėti
+                  </button>
+                </div>
+              ) : null}
+              {selectedEmployee.deployments.filter(isEmployeeAway).length ? (
+                <div className="mt-3 space-y-2">
+                  {selectedEmployee.deployments
+                    .filter(isEmployeeAway)
+                    .map((deployment) => (
+                      <div key={deployment.id} className="rounded-lg border p-3 text-sm">
+                        <p className="font-medium text-navy">
+                          {deployment.type === "VACATION_LT" ? "Atostogos" : "Tranzitas"}
+                          {isCurrentDeployment(deployment) ? " · dabar" : ""}
+                        </p>
+                        <p className="text-muted">
+                          {format(new Date(deployment.startDate), "yyyy-MM-dd")} –{" "}
+                          {deployment.endDate ? format(new Date(deployment.endDate), "yyyy-MM-dd") : "vyksta"}
+                        </p>
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-muted">Atostogų įrašų nėra.</p>
+              )}
+            </section>
 
             <section className="mt-6 border-t pt-4">
               <div className="flex items-center justify-between gap-3">

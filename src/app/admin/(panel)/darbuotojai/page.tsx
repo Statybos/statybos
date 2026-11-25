@@ -15,7 +15,10 @@ export default async function EmployeesPage() {
         },
       },
     }),
-    prisma.projectObject.findMany({ orderBy: { country: "asc" } }),
+    prisma.projectObject.findMany({
+      where: { status: "ACTIVE" },
+      orderBy: { country: "asc" },
+    }),
   ]);
 
   return (
